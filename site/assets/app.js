@@ -128,6 +128,7 @@ function renderManifest(manifest) {
   text("unconfirmed-count", numberFormatter.format(manifest.not_confirmed_rows));
   text("prize-count", numberFormatter.format(manifest.prize_rows));
   text("method-version", manifest.methodology_version);
+  renderAuditOverview(manifest.fairness_audit);
 }
 
 function renderProductTabs(products) {
@@ -179,7 +180,7 @@ async function selectProduct(slug) {
 }
 
 function renderProductReport(report) {
-  const { product, summary, analysis, backtest } = report;
+  const { product, summary, analysis, backtest, audit } = report;
   text(
     "product-kind",
     product.kind === "number_set" ? "Tập số không lặp" : "Chuỗi chữ số có vị trí",
@@ -191,6 +192,7 @@ function renderProductReport(report) {
 
   renderMetrics(summary, analysis, product);
   renderUniformity(analysis.uniformity, product.kind);
+  renderFairnessAudit(audit);
   renderBacktest(backtest, product.kind);
   renderPrizeReport(summary.prizes);
   renderRecentDraws(summary.recent_draws, product.kind);
@@ -308,6 +310,99 @@ function renderUniformity(uniformity, kind) {
         </div>`,
     )
     .join("");
+}
+
+function renderAuditOverview(summary) {
+  if (!summary) return;
+  const counts = summary.status_counts || {};
+  text("audit-test-count", numberFormatter.format(summary.test_count || 0));
+  text("audit-review-count", numberFormatter.format(counts.review || 0));
+  text("audit-watch-count", numberFormatter.format(counts.watch || 0));
+  text("audit-global-conclusion", summary.conclusion || "Chưa có kết luận kiểm định.");
+}
+
+function renderFairnessAudit(audit) {
+  if (!audit) return;
+  const counts = audit.status_counts || {};
+  const review = counts.review || 0;
+  const watch = counts.watch || 0;
+  const pass = counts.pass || 0;
+  const verdict = review
+    ? "Cần đọc kỹ"
+    : watch
+      ? "Cần theo dõi"
+      : "Chưa thấy tín hiệu mạnh";
+  text("audit-product-verdict", verdict);
+  text("audit-product-conclusion", audit.conclusion);
+  const metrics = [
+    ["Kiểm định đã chạy", audit.tests.length],
+    ["Đạt ngưỡng bình thường", pass],
+    ["Cần theo dõi", watch],
+    ["Cần đọc kỹ", review],
+    ["Chạy lại sau", `${numberFormatter.format(audit.audit_interval_draws)} kỳ`],
+  ];
+  document.getElementById("audit-product-metrics").innerHTML = metrics
+    .map(
+      ([label, value]) => `
+        <article>
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </article>`,
+    )
+    .join("");
+
+  const ranked = [...audit.tests].sort((left, right) => {
+    const order = { review: 0, watch: 1, skipped: 2, pass: 3 };
+    const leftRank = order[left.status] ?? 3;
+    const rightRank = order[right.status] ?? 3;
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    return (left.q_value_global_bh || left.q_value_bh || 1)
+      - (right.q_value_global_bh || right.q_value_bh || 1);
+  });
+  document.getElementById("audit-test-list").innerHTML = ranked
+    .slice(0, 8)
+    .map(renderAuditTestRow)
+    .join("");
+
+  document.getElementById("audit-method-catalog").innerHTML = `
+    <div class="audit-family-list">
+      ${(audit.families || []).map((family) => `
+        <article>
+          <strong>${escapeHtml(family.label)}</strong>
+          <span>${escapeHtml(family.plain_language)}</span>
+        </article>`).join("")}
+    </div>
+    <p class="method-note">
+      Nhóm thuật toán nặng như HMM, MCMC, TestU01 đầy đủ và deep learning chưa chạy tự động
+      trong phiên bản này vì chi phí cao và dễ khó giải thích.
+    </p>`;
+}
+
+function renderAuditTestRow(test) {
+  const qValue = test.q_value_global_bh ?? test.q_value_bh;
+  const statusCopy = {
+    pass: "Bình thường",
+    watch: "Theo dõi",
+    review: "Đọc kỹ",
+    skipped: "Tạm hoãn",
+  };
+  const pValue = test.p_value == null ? "N/A" : formatPValue(test.p_value);
+  const qDisplay = qValue == null ? "N/A" : formatPValue(qValue);
+  const effect = test.effect_size == null ? "N/A" : formatDecimal(test.effect_size, 4);
+  return `
+    <article class="audit-test-row ${escapeHtml(test.status)}">
+      <div>
+        <span>${escapeHtml(test.algorithm)}</span>
+        <strong>${escapeHtml(test.label)}</strong>
+        <p>${escapeHtml(test.plain_language)}</p>
+      </div>
+      <dl>
+        <div><dt>Trạng thái</dt><dd>${escapeHtml(statusCopy[test.status] || test.status)}</dd></div>
+        <div><dt>p</dt><dd>${escapeHtml(pValue)}</dd></div>
+        <div><dt>q</dt><dd>${escapeHtml(qDisplay)}</dd></div>
+        <div><dt>Độ lớn</dt><dd>${escapeHtml(effect)}</dd></div>
+      </dl>
+    </article>`;
 }
 
 function renderNumberAnalysis(analysis, product) {

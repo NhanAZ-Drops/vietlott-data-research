@@ -578,6 +578,77 @@ a {
   font-size: 29px;
 }
 
+.audit-overview {
+  padding-block: 100px 0;
+}
+
+.audit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.audit-summary-grid article,
+.audit-conclusion-card {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgb(255 253 247 / 68%);
+  box-shadow: var(--shadow);
+}
+
+.audit-summary-grid article {
+  padding: 24px;
+}
+
+.audit-summary-grid span,
+.audit-conclusion-card span,
+.audit-mini-grid span {
+  display: block;
+  color: #426a66;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.audit-summary-grid strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--forest);
+  font-size: 38px;
+  line-height: 1;
+}
+
+.audit-summary-grid small {
+  display: block;
+  margin-top: 10px;
+  color: var(--ink-soft);
+}
+
+.audit-conclusion-card {
+  display: grid;
+  grid-template-columns: 0.4fr 1fr auto;
+  gap: 20px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 24px;
+}
+
+.audit-conclusion-card p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.audit-conclusion-card a {
+  padding: 10px 14px;
+  border: 1px solid var(--forest);
+  border-radius: 999px;
+  color: var(--forest);
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .analysis-section {
   padding-block: 110px;
 }
@@ -840,6 +911,133 @@ a {
   display: block;
   margin-top: 5px;
   font-size: 20px;
+}
+
+.audit-panel {
+  background:
+    radial-gradient(circle at 0 0, rgb(217 255 112 / 14%), transparent 28%),
+    var(--paper);
+}
+
+.audit-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin: 22px 0;
+}
+
+.audit-mini-grid article {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgb(243 240 230 / 58%);
+}
+
+.audit-mini-grid strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 20px;
+}
+
+.audit-test-list {
+  display: grid;
+  gap: 10px;
+}
+
+.audit-test-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 0.6fr);
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-left-width: 5px;
+  border-radius: 18px;
+  background: rgb(255 253 247 / 72%);
+}
+
+.audit-test-row.pass {
+  border-left-color: #9ab7a5;
+}
+
+.audit-test-row.watch {
+  border-left-color: var(--amber);
+}
+
+.audit-test-row.review {
+  border-left-color: var(--coral);
+}
+
+.audit-test-row.skipped {
+  border-left-color: #b9b3a5;
+}
+
+.audit-test-row span {
+  color: #5c6d6a;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.audit-test-row strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.audit-test-row p {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.audit-test-row dl {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.audit-test-row dl div {
+  padding: 9px;
+  border-radius: 12px;
+  background: #f1ede2;
+}
+
+.audit-test-row dt {
+  color: #667673;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.audit-test-row dd {
+  margin: 3px 0 0;
+  font-weight: 900;
+}
+
+.audit-family-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.audit-family-list article {
+  padding: 12px;
+  border-radius: 14px;
+  background: #f1ede2;
+}
+
+.audit-family-list strong,
+.audit-family-list span {
+  display: block;
+}
+
+.audit-family-list span {
+  margin-top: 4px;
+  color: var(--ink-soft);
 }
 
 .method-note {
@@ -1650,8 +1848,15 @@ a {
 
   .data-ribbon-inner,
   .metric-grid,
+  .audit-summary-grid,
+  .audit-mini-grid,
   .method-steps {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .audit-conclusion-card,
+  .audit-test-row {
+    grid-template-columns: 1fr;
   }
 
   .number-map-layout {
@@ -1730,6 +1935,9 @@ a {
 
   .data-ribbon-inner,
   .metric-grid,
+  .audit-summary-grid,
+  .audit-mini-grid,
+  .audit-family-list,
   .two-column,
   .recent-draws,
   .method-steps,
@@ -1744,10 +1952,20 @@ a {
   }
 
   .analysis-section,
+  .audit-overview,
   .prediction-section,
   .method-preview,
   .project-stance {
     padding-block: 75px;
+  }
+
+  .audit-conclusion-card,
+  .audit-test-row {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-test-row dl {
+    grid-template-columns: 1fr;
   }
 
   .project-stance {

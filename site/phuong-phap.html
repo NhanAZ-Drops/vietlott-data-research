@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260614-4">
+  <link rel="stylesheet" href="assets/styles.css?v=20260614-6">
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -47,6 +47,7 @@
         <a href="#thoi-gian">Thời gian và mùa vụ</a>
         <a href="#cau-truc">Cấu trúc tổ hợp</a>
         <a href="#du-doan">Dự đoán và backtest</a>
+        <a href="#kiem-dinh">Kiểm định công bằng</a>
         <a href="#gioi-han">Giới hạn</a>
         <a href="#thuat-ngu">Thuật ngữ</a>
       </aside>
@@ -223,8 +224,46 @@
           </p>
         </section>
 
-        <section id="gioi-han">
+        <section id="kiem-dinh">
           <p class="article-index">07</p>
+          <h2>Kiểm định công bằng thống kê</h2>
+          <p>
+            Bộ kiểm định công bằng thống kê là lớp độc lập với phần dự đoán. Nó không cố tìm bộ số
+            cho kỳ sau, mà hỏi một câu khác: dữ liệu công khai hiện có lệch khỏi mô hình ngẫu nhiên
+            đến mức nào, lệch ở nhóm nào và có cần theo dõi tiếp hay không.
+          </p>
+          <div class="strategy-list">
+            <article>
+              <strong>Phân bố</strong>
+              <span>chi-square, G-test, entropy, hypergeometric</span>
+              <p>Đếm tần suất số, chữ số, chẵn lẻ, tổng chữ số và so với phân bố kỳ vọng.</p>
+            </article>
+            <article>
+              <strong>Thời gian</strong>
+              <span>runs test, autocorrelation, split-half</span>
+              <p>Kiểm tra chuỗi kết quả có phụ thuộc theo thời gian hoặc đổi chế độ rõ không.</p>
+            </article>
+            <article>
+              <strong>Đồng xuất hiện</strong>
+              <span>pair chi-square, repeat-rate</span>
+              <p>Đọc các cặp số hoặc chuỗi lặp lại, nhưng luôn ghi chú rủi ro phụ thuộc trong cùng kỳ.</p>
+            </article>
+          </div>
+          <p>
+            Mỗi phép kiểm định xuất ra thống kê, p-value, q-value sau hiệu chỉnh Benjamini-Hochberg,
+            kích thước hiệu ứng và diễn giải ngắn. Website dùng ba nhãn: <code>pass</code> khi chưa
+            thấy tín hiệu mạnh, <code>watch</code> khi cần theo dõi, và <code>review</code> khi tín
+            hiệu đủ đáng đọc kỹ sau hiệu chỉnh.
+          </p>
+          <p class="callout warning">
+            Đây không phải kiểm toán vận hành độc lập theo nghĩa pháp lý. Dữ liệu công khai không có
+            mã máy, mã bộ bi, log bảo trì, điều kiện môi trường và biên bản kiểm định thiết bị. Vì vậy
+            kết luận mạnh nhất của lớp này chỉ là tín hiệu thống kê cần quan sát hoặc cần bổ sung dữ liệu.
+          </p>
+        </section>
+
+        <section id="gioi-han">
+          <p class="article-index">08</p>
           <h2>Giới hạn hiện tại</h2>
           <ul class="research-list">
             <li>Không có metadata máy quay, bộ bi, bảo trì, địa điểm và môi trường</li>
@@ -237,7 +276,7 @@
         </section>
 
         <section id="thuat-ngu">
-          <p class="article-index">08</p>
+          <p class="article-index">09</p>
           <h2>Thuật ngữ cho người mới</h2>
           <dl class="glossary">
             <div><dt>Baseline</dt><dd>Mốc đơn giản phải vượt qua. Ở đây là chọn đồng đều.</dd></div>

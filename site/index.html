@@ -13,8 +13,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260614-4">
-  <script src="assets/app.js?v=20260614-4" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260614-6">
+  <script src="assets/app.js?v=20260614-6" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -29,6 +29,7 @@
     <nav id="site-nav" class="site-nav" aria-label="Điều hướng chính">
       <a href="#tong-quan">Tổng quan</a>
       <a href="#phan-tich">Phân tích</a>
+      <a href="#kiem-dinh">Kiểm định</a>
       <a href="#du-doan">Dự đoán</a>
       <a href="phuong-phap.html">Phương pháp</a>
       <a href="du-lieu.html">Dữ liệu</a>
@@ -158,6 +159,42 @@
       </div>
     </section>
 
+    <section id="kiem-dinh" class="audit-overview shell" aria-labelledby="audit-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Kiểm định công bằng thống kê</p>
+          <h2 id="audit-title">Một bộ kiểm tra rộng, nhưng không phán xét quá dữ liệu.</h2>
+        </div>
+        <p>
+          Mỗi lần báo cáo được tạo lại, website chạy một bộ kiểm định nhẹ trên từng sản phẩm,
+          hiệu chỉnh nhiều kiểm định và lưu log máy đọc được. Kết quả dùng để tìm tín hiệu cần
+          quan sát tiếp, không thay thế kiểm toán vận hành độc lập.
+        </p>
+      </div>
+      <div class="audit-summary-grid">
+        <article>
+          <span>Số kiểm định</span>
+          <strong id="audit-test-count">...</strong>
+          <small>Trên toàn bộ sản phẩm</small>
+        </article>
+        <article>
+          <span>Cần đọc kỹ</span>
+          <strong id="audit-review-count">...</strong>
+          <small>Sau hiệu chỉnh toàn cục</small>
+        </article>
+        <article>
+          <span>Cần theo dõi</span>
+          <strong id="audit-watch-count">...</strong>
+          <small>Tín hiệu chưa đủ kết luận</small>
+        </article>
+      </div>
+      <div class="audit-conclusion-card">
+        <span>Kết luận snapshot hiện tại</span>
+        <p id="audit-global-conclusion">Đang đọc bộ kiểm định...</p>
+        <a href="data/audit-log.jsonl">Tải log kiểm định JSONL</a>
+      </div>
+    </section>
+
     <section id="phan-tich" class="analysis-section shell">
       <div class="section-heading">
         <div>
@@ -210,6 +247,25 @@
             Nó không cho biết sai lệch lớn đến đâu và không chứng minh có thể dự đoán kỳ sau.
             <a href="phuong-phap.html#thuat-ngu">Xem giải thích thuật ngữ</a>.
           </p>
+        </section>
+
+        <section class="panel audit-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Kiểm định độc lập theo dữ liệu công khai</p>
+              <h3>Bộ kiểm định công bằng thống kê</h3>
+            </div>
+            <span id="audit-product-verdict" class="verdict">...</span>
+          </div>
+          <p id="audit-product-conclusion" class="method-note">
+            Đang đọc các kiểm định phân bố, chuỗi thời gian và đồng xuất hiện.
+          </p>
+          <div id="audit-product-metrics" class="audit-mini-grid"></div>
+          <div id="audit-test-list" class="audit-test-list"></div>
+          <details class="technical-details">
+            <summary>Thuật toán đang chạy và thuật toán chưa chạy</summary>
+            <div id="audit-method-catalog"></div>
+          </details>
         </section>
 
         <div id="number-analysis" class="analysis-kind" hidden>

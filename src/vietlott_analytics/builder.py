@@ -4,6 +4,12 @@ import json
 from pathlib import Path
 
 from .catalog import PRODUCT_ORDER, PRODUCTS
+from .fairness import (
+    audit_log_events,
+    build_product_audit,
+    dump_jsonl,
+    finalize_audits,
+)
 from .io import load_prize_summary, load_product_dataset
 from .predictions import PredictionLedger, build_backtest_report
 from .statistics import build_product_report
@@ -20,6 +26,7 @@ def build_research_site(
     product_data_dir.mkdir(parents=True, exist_ok=True)
     ledger = PredictionLedger.load(prediction_ledger_path.resolve())
     product_summaries: list[dict[str, object]] = []
+    product_reports: list[dict[str, object]] = []
 
     for slug in PRODUCT_ORDER:
         product = PRODUCTS[slug]
@@ -27,7 +34,8 @@ def build_research_site(
         prize_summary = load_prize_summary(datasets_dir, product)
         report = build_product_report(dataset, prize_summary)
         report["backtest"] = build_backtest_report(dataset)
-        _write_json(product_data_dir / f"{slug}.json", report)
+        report["audit"] = build_product_audit(dataset)
+        product_reports.append(report)
         ledger.process_product(dataset)
         summary = report["summary"]
         product_summaries.append(
@@ -44,6 +52,12 @@ def build_research_site(
                 "latest_draw_id": summary["latest_draw_id"],
             }
         )
+
+    audit_summary = finalize_audits(product_reports)
+    for report in product_reports:
+        _write_json(product_data_dir / f"{report['product']['slug']}.json", report)
+    _write_json(site_dir / "data" / "audit-summary.json", audit_summary)
+    _write_jsonl(site_dir / "data" / "audit-log.jsonl", audit_log_events(product_reports))
 
     ledger.save()
     prediction_report = ledger.site_report()
@@ -62,6 +76,7 @@ def build_research_site(
         "products": product_summaries,
         "prediction_evaluations": prediction_report["evaluation_count"],
         "prediction_pending": prediction_report["pending_count"],
+        "fairness_audit": audit_summary["summary"],
         "methodology_version": "1.0.0",
     }
     _write_json(site_dir / "data" / "manifest.json", manifest)
@@ -82,4 +97,11 @@ def _write_json(path: Path, value: object) -> None:
         + "\n",
         encoding="utf-8",
     )
+    temp_path.replace(path)
+
+
+def _write_jsonl(path: Path, events: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_suffix(f"{path.suffix}.tmp")
+    temp_path.write_text(dump_jsonl(events), encoding="utf-8")
     temp_path.replace(path)
