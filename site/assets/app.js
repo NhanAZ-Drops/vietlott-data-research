@@ -470,10 +470,17 @@ function renderFairnessAudit(audit) {
     return (left.q_value_global_bh || left.q_value_bh || 1)
       - (right.q_value_global_bh || right.q_value_bh || 1);
   });
-  document.getElementById("audit-test-list").innerHTML = ranked
-    .slice(0, 8)
-    .map(renderAuditTestRow)
-    .join("");
+  const highlightedTests = ranked.slice(0, 8);
+  document.getElementById("audit-test-list").innerHTML = `
+    <details class="audit-test-details">
+      <summary>
+        <span>Chi tiết kiểm định</span>
+        <strong>${numberFormatter.format(highlightedTests.length)} phép kiểm nổi bật</strong>
+      </summary>
+      <div class="audit-test-list-inner">
+        ${highlightedTests.map(renderAuditTestRow).join("")}
+      </div>
+    </details>`;
 
   document.getElementById("audit-method-catalog").innerHTML = `
     <div class="audit-family-list">

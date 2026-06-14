@@ -1194,8 +1194,70 @@ a {
 }
 
 .audit-test-list {
+  display: block;
+}
+
+.audit-test-details {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgb(255 253 247 / 72%);
+}
+
+.audit-test-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.audit-test-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.audit-test-details summary::after {
+  flex: 0 0 auto;
+  content: "Mở chi tiết";
+  padding: 8px 12px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.audit-test-details[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.audit-test-details[open] summary::after {
+  content: "Thu gọn";
+}
+
+.audit-test-details summary span {
+  color: #5c6d6a;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.audit-test-details summary strong {
+  display: block;
+  font-size: 17px;
+}
+
+.audit-test-list-inner {
   display: grid;
   gap: 10px;
+  padding: 12px;
+}
+
+.audit-test-details:not([open]) > .audit-test-list-inner {
+  display: none;
 }
 
 .audit-test-row {
