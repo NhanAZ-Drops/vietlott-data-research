@@ -2,7 +2,7 @@ const docsNumberFormatter = new Intl.NumberFormat("vi-VN");
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    const response = await fetch("data/manifest.json");
+    const response = await fetch("data/manifest.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const manifest = await response.json();
     document.querySelectorAll("[data-manifest]").forEach((node) => {
