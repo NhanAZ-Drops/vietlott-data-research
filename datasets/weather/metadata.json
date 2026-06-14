@@ -1,7 +1,7 @@
 {
   "first_date": "2016-07-20",
   "geocoding_source": "https://www.openstreetmap.org/copyright",
-  "latest_date": "2026-06-08",
+  "latest_date": "2026-06-07",
   "limitations": [
     "Dữ liệu là tái phân tích thời tiết ngoài trời, không phải đo trong phòng quay.",
     "Giá trị theo ngày không phản ánh chính xác điều kiện tại phút quay.",
@@ -11,7 +11,7 @@
   ],
   "nominal_availability_delay_days": 5,
   "pipeline_safety_lag_days": 7,
-  "rows": 3611,
+  "rows": 3610,
   "schema_version": 1,
   "source": "Open-Meteo Historical Weather API",
   "source_documentation": "https://open-meteo.com/en/docs/historical-weather-api",
