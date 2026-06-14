@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Báo cáo thống kê, kiểm định và dự đoán có lưu vết trên dữ liệu lịch sử Vietlott.">
+  <meta name="theme-color" content="#102a2b">
+  <meta property="og:title" content="Vietlott Data Research">
+  <meta property="og:description" content="Đo lường tính ngẫu nhiên bằng dữ liệu, không bán giấc mơ dự đoán.">
+  <title>Vietlott Data Research</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Vietlott Data Research">
+      <span class="brand-mark">VDR</span>
+      <span class="brand-copy">Vietlott<br>Data Research</span>
+    </a>
+    <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav">
+      Menu
+    </button>
+    <nav id="site-nav" class="site-nav" aria-label="Điều hướng chính">
+      <a href="#tong-quan">Tổng quan</a>
+      <a href="#phan-tich">Phân tích</a>
+      <a href="#du-doan">Dự đoán</a>
+      <a href="phuong-phap.html">Phương pháp</a>
+      <a href="du-lieu.html">Dữ liệu</a>
+      <a class="nav-github" href="https://github.com/NhanAZ/vietlott-data-research">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section id="tong-quan" class="hero shell">
+      <div class="hero-copy">
+        <p class="eyebrow">Phòng thí nghiệm xác suất mở</p>
+        <h1>Ngẫu nhiên,<br><span>nhưng có thể đo lường.</span></h1>
+        <p class="hero-lead">
+          Toàn bộ lịch sử được biến thành các báo cáo dễ đọc, có kiểm định, có
+          baseline và có dấu vết tái lập. Mục tiêu không phải tìm một "số thần",
+          mà là đo xem dữ liệu lệch khỏi mô hình đồng đều bao xa.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#phan-tich">Mở bàn phân tích</a>
+          <a class="button button-quiet" href="phuong-phap.html">Đọc phương pháp</a>
+        </div>
+      </div>
+      <div class="hero-figure" aria-label="Tóm tắt dữ liệu">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="hero-number">
+          <strong id="hero-draw-count">...</strong>
+          <span>bản ghi kỳ quay</span>
+        </div>
+        <div class="hero-badge hero-badge-a">
+          <span class="status-dot"></span>
+          <span>Cập nhật tự động</span>
+        </div>
+        <div class="hero-badge hero-badge-b">
+          <strong id="hero-product-count">8</strong>
+          <span>sản phẩm</span>
+        </div>
+        <div class="hero-badge hero-badge-c">
+          <strong id="hero-date">...</strong>
+          <span>dữ liệu mới nhất</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="quick-read shell" aria-labelledby="quick-title">
+      <div class="section-heading compact">
+        <p class="eyebrow">Đọc nhanh trong 60 giây</p>
+        <h2 id="quick-title">Ba điều cần nhớ trước mọi biểu đồ</h2>
+      </div>
+      <div class="principle-grid">
+        <article class="principle-card">
+          <span class="principle-index">01</span>
+          <h3>Tần suất không phải lời tiên tri</h3>
+          <p>Một số đã xuất hiện nhiều không tự nhiên có xác suất cao hơn ở kỳ kế tiếp.</p>
+        </article>
+        <article class="principle-card">
+          <span class="principle-index">02</span>
+          <h3>Giá trị p chưa đủ</h3>
+          <p>Luôn đọc cùng kích thước hiệu ứng, entropy và cách đã hiệu chỉnh nhiều kiểm định.</p>
+        </article>
+        <article class="principle-card">
+          <span class="principle-index">03</span>
+          <h3>Dự đoán phải được khóa trước</h3>
+          <p>Sổ dự đoán ghi kết quả trước kỳ quay và chỉ đánh giá khi dữ liệu thật xuất hiện.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="data-ribbon">
+      <div class="shell data-ribbon-inner">
+        <div>
+          <span>Đã xác nhận</span>
+          <strong id="confirmed-count">...</strong>
+        </div>
+        <div>
+          <span>Chưa xác nhận</span>
+          <strong id="unconfirmed-count">...</strong>
+        </div>
+        <div>
+          <span>Dòng giải thưởng</span>
+          <strong id="prize-count">...</strong>
+        </div>
+        <div>
+          <span>Phiên bản phương pháp</span>
+          <strong id="method-version">...</strong>
+        </div>
+      </div>
+    </section>
+
+    <section id="phan-tich" class="analysis-section shell">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Báo cáo tương tác</p>
+          <h2>Một bàn phân tích cho mọi sản phẩm</h2>
+        </div>
+        <p>
+          Chọn trò chơi để xem báo cáo được xây đúng theo cấu trúc kết quả của nó.
+          Keno không bị ép vào cùng khuôn với Bingo18 hay Max 3D.
+        </p>
+      </div>
+
+      <div id="product-tabs" class="product-tabs" role="tablist" aria-label="Chọn sản phẩm"></div>
+
+      <div id="dashboard-loading" class="loading-card" role="status">
+        <span class="loader"></span>
+        Đang đọc báo cáo thống kê
+      </div>
+
+      <div id="dashboard" class="dashboard" hidden>
+        <section class="product-masthead panel panel-dark">
+          <div>
+            <p class="panel-kicker" id="product-kind">...</p>
+            <h2 id="product-name">...</h2>
+            <p id="product-note">...</p>
+          </div>
+          <div class="latest-draw">
+            <span>Kỳ xác nhận mới nhất</span>
+            <strong id="latest-draw-id">...</strong>
+            <time id="latest-draw-date">...</time>
+          </div>
+        </section>
+
+        <div id="product-metrics" class="metric-grid"></div>
+
+        <section class="panel conclusion-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Kiểm định đồng đều</p>
+              <h3>Dữ liệu đang kể câu chuyện gì?</h3>
+            </div>
+            <span id="test-verdict" class="verdict">...</span>
+          </div>
+          <div class="conclusion-layout">
+            <p id="test-explanation" class="big-explanation">...</p>
+            <div class="test-metrics" id="test-metrics"></div>
+          </div>
+          <p class="method-note">
+            Giá trị p nhỏ chỉ nói dữ liệu khó phù hợp với mô hình tham chiếu. Nó không đo
+            độ lớn sai lệch và không chứng minh có thể dự đoán kỳ sau.
+          </p>
+        </section>
+
+        <div id="number-analysis" class="analysis-kind" hidden>
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Tần suất biên</p>
+                <h3>Bản đồ từng con số</h3>
+              </div>
+              <div class="legend">
+                <span><i class="legend-low"></i>Ít hơn kỳ vọng</span>
+                <span><i class="legend-neutral"></i>Gần kỳ vọng</span>
+                <span><i class="legend-high"></i>Nhiều hơn kỳ vọng</span>
+              </div>
+            </div>
+            <div class="number-map-layout">
+              <div>
+                <div id="number-grid" class="number-grid" aria-label="Bản đồ độ lệch chuẩn hóa"></div>
+                <p class="method-note">Chạm vào một số để xem hồ sơ chi tiết và mùa vụ.</p>
+              </div>
+              <article id="number-profile" class="number-profile"></article>
+            </div>
+          </section>
+
+          <div class="two-column">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Tần suất chuẩn hóa</p>
+                  <h3>Số nổi bật nhất</h3>
+                </div>
+                <span class="tiny-label">Theo z-score</span>
+              </div>
+              <div id="frequency-chart" class="bar-chart"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Độ vắng</p>
+                  <h3>Lâu chưa xuất hiện</h3>
+                </div>
+                <span class="tiny-label">Đơn vị kỳ quay</span>
+              </div>
+              <div id="overdue-chart" class="bar-chart"></div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Mùa vụ mô tả</p>
+                <h3 id="month-title">Tần suất theo tháng</h3>
+              </div>
+              <span class="tiny-label">Đã chia cho số kỳ trong tháng</span>
+            </div>
+            <div id="month-chart" class="month-chart"></div>
+            <h4 class="subchart-title">Theo thứ trong tuần</h4>
+            <div id="weekday-chart" class="month-chart weekday-chart"></div>
+            <p class="method-note">
+              Tháng trong năm không phải dữ liệu nhiệt độ. Biểu đồ này chỉ phát hiện mô
+              tả mùa vụ, chưa đủ để kết luận quan hệ nhân quả với thời tiết.
+            </p>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Thứ hạng sau khi sắp tăng dần</p>
+                <h3>Tần suất theo vị trí công bố</h3>
+              </div>
+            </div>
+            <div id="position-heatmap" class="heatmap-wrap"></div>
+            <p class="method-note">
+              Đây là vị trí trong dãy đã sắp xếp, không phải thứ tự viên bi rời khỏi máy quay.
+            </p>
+          </section>
+
+          <div class="two-column">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Hình dạng tổ hợp</p>
+                  <h3>Phân phối tổng</h3>
+                </div>
+              </div>
+              <div id="sum-histogram" class="svg-chart"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Cấu trúc lân cận</p>
+                  <h3>Chẵn lẻ và số liên tiếp</h3>
+                </div>
+              </div>
+              <div id="structure-summary" class="structure-summary"></div>
+            </section>
+          </div>
+
+          <section id="pair-panel" class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Đồng xuất hiện</p>
+                <h3>Các cặp lệch khỏi kỳ vọng nhiều nhất</h3>
+              </div>
+              <span class="tiny-label">Thống kê hậu nghiệm</span>
+            </div>
+            <div id="pair-table" class="table-wrap"></div>
+          </section>
+        </div>
+
+        <div id="digit-analysis" class="analysis-kind" hidden>
+          <div class="two-column">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Mười chữ số</p>
+                  <h3>Tần suất tổng thể</h3>
+                </div>
+              </div>
+              <div id="digit-chart" class="bar-chart"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Vị trí có ý nghĩa</p>
+                  <h3>Hàng trăm, chục và đơn vị</h3>
+                </div>
+              </div>
+              <div id="digit-position-heatmap" class="heatmap-wrap"></div>
+            </section>
+          </div>
+          <div class="two-column">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Cấu trúc chuỗi</p>
+                  <h3>Phân phối tổng chữ số</h3>
+                </div>
+              </div>
+              <div id="digit-sum-histogram" class="svg-chart"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">Mẫu lặp</p>
+                  <h3>Số chữ số khác nhau</h3>
+                </div>
+              </div>
+              <div id="digit-unique-chart" class="bar-chart"></div>
+            </section>
+          </div>
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Bảng xếp hạng mô tả</p>
+                <h3>Các chuỗi xuất hiện nhiều</h3>
+              </div>
+              <span class="tiny-label">Không phải khuyến nghị chọn số</span>
+            </div>
+            <div id="sequence-table" class="table-wrap"></div>
+          </section>
+        </div>
+
+        <div class="two-column">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Backtest cuốn chiếu</p>
+                <h3>Mô hình có hơn baseline?</h3>
+              </div>
+            </div>
+            <div id="backtest-report"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">Giải thưởng công bố</p>
+                <h3>Phạm vi dữ liệu giải</h3>
+              </div>
+            </div>
+            <div id="prize-report" class="prize-report"></div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Dữ liệu gốc gần nhất</p>
+              <h3>Mười hai kỳ mới</h3>
+            </div>
+          </div>
+          <div id="recent-draws" class="recent-draws"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="du-doan" class="prediction-section">
+      <div class="shell">
+        <div class="section-heading light">
+          <div>
+            <p class="eyebrow">Phòng dự báo có niêm phong</p>
+            <h2>Dự đoán trước, đối chiếu sau</h2>
+          </div>
+          <p>
+            Mỗi bản dự đoán có mã, thời điểm, kỳ dữ liệu cuối, phiên bản thuật toán
+            và seed. Dòng cũ không bị sửa khi kết quả thật xuất hiện.
+          </p>
+        </div>
+        <div class="prediction-warning">
+          <strong>Không phải lời khuyên mua vé.</strong>
+          <span>
+            Mô hình chỉ là thí nghiệm đối chiếu. Nếu không thắng baseline đồng đều
+            ngoài mẫu, nó chưa có giá trị dự báo.
+          </span>
+        </div>
+        <div class="prediction-toolbar">
+          <label for="prediction-product">Sản phẩm</label>
+          <select id="prediction-product"></select>
+          <span id="prediction-ledger-status">...</span>
+        </div>
+        <div id="prediction-cards" class="prediction-grid"></div>
+        <div class="archive-summary">
+          <div>
+            <span>Dự đoán đang chờ</span>
+            <strong id="pending-predictions">...</strong>
+          </div>
+          <div>
+            <span>Lượt đã đối chiếu</span>
+            <strong id="evaluated-predictions">...</strong>
+          </div>
+          <div>
+            <span>Phiên bản mô hình</span>
+            <strong id="prediction-version">...</strong>
+          </div>
+          <a href="phuong-phap.html#du-doan">Xem thuật toán và quy tắc chống rò rỉ dữ liệu</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="method-preview shell">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Từ dữ liệu đến kết luận</p>
+          <h2>Bốn lớp để không tự đánh lừa mình</h2>
+        </div>
+      </div>
+      <ol class="method-steps">
+        <li>
+          <span>1</span>
+          <div><strong>Chất lượng dữ liệu</strong><p>Loại kỳ chưa xác nhận, kiểm tra trùng, miền giá trị và nguồn gốc.</p></div>
+        </li>
+        <li>
+          <span>2</span>
+          <div><strong>Thống kê mô tả</strong><p>Tần suất, độ vắng, tháng, vị trí, tổng, entropy và đồng xuất hiện.</p></div>
+        </li>
+        <li>
+          <span>3</span>
+          <div><strong>Kiểm định</strong><p>So với mô hình đồng đều, báo p-value, kích thước hiệu ứng và FDR.</p></div>
+        </li>
+        <li>
+          <span>4</span>
+          <div><strong>Ngoài mẫu</strong><p>Backtest theo thời gian và sổ dự đoán đóng băng trước khi biết đáp án.</p></div>
+        </li>
+      </ol>
+      <a class="text-link" href="phuong-phap.html">Đọc đầy đủ phương pháp, công thức và giới hạn</a>
+    </section>
+
+    <section class="closing shell">
+      <p class="eyebrow">Kịch bản khoa học cũng có thể là không tìm thấy gì</p>
+      <blockquote>
+        "Không bác bỏ được mô hình đồng đều" không phải thất bại. Đó là một kết quả
+        định lượng, có thể tái lập và trung thực hơn một lời hứa dự đoán hấp dẫn.
+      </blockquote>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div>
+        <span class="brand-mark">VDR</span>
+        <p>Dự án cá nhân phục vụ học tập, khoa học dữ liệu và xác suất thống kê.</p>
+      </div>
+      <div>
+        <strong>Tài liệu</strong>
+        <a href="phuong-phap.html">Phương pháp</a>
+        <a href="du-lieu.html">Dữ liệu và tái lập</a>
+        <a href="https://github.com/NhanAZ/vietlott-data-research">Mã nguồn</a>
+      </div>
+      <div>
+        <strong>Lưu ý</strong>
+        <p>Không liên kết với Vietlott hoặc MoMo. Không phải tư vấn tài chính.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cấu trúc dữ liệu, nguồn và cách tái lập Vietlott Data Research.">
+  <meta name="theme-color" content="#102a2b">
+  <title>Dữ liệu và tái lập | Vietlott Data Research</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/docs.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">VDR</span>
+      <span class="brand-copy">Vietlott<br>Data Research</span>
+    </a>
+    <nav class="site-nav document-nav" aria-label="Điều hướng chính">
+      <a href="index.html">Báo cáo</a>
+      <a href="phuong-phap.html">Phương pháp</a>
+      <a href="du-lieu.html" aria-current="page">Dữ liệu</a>
+      <a class="nav-github" href="https://github.com/NhanAZ/vietlott-data-research">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main" class="document-shell">
+    <header class="document-hero data-hero">
+      <p class="eyebrow">Dữ liệu mở để kiểm tra</p>
+      <h1>Từ nguồn công khai đến một tập dữ liệu có dấu vết.</h1>
+      <p>
+        CSV được chia vùng để tải thuận tiện trên GitHub. Báo cáo web là sản phẩm
+        dẫn xuất, có thể tạo lại bằng một lệnh từ đúng snapshot dữ liệu.
+      </p>
+      <div class="document-stats">
+        <div><span>Bản ghi kỳ quay</span><strong data-manifest="draw_rows">...</strong></div>
+        <div><span>Dòng giải thưởng</span><strong data-manifest="prize_rows">...</strong></div>
+        <div><span>Kỳ chưa xác nhận</span><strong data-manifest="not_confirmed_rows">...</strong></div>
+      </div>
+    </header>
+
+    <div class="document-layout">
+      <aside class="document-toc">
+        <strong>Mục lục</strong>
+        <a href="#bao-phu">Độ bao phủ</a>
+        <a href="#nguon">Nguồn dữ liệu</a>
+        <a href="#schema">Schema</a>
+        <a href="#tai">Tải và đọc</a>
+        <a href="#tai-lap">Tái lập báo cáo</a>
+        <a href="#phap-ly">Pháp lý và trách nhiệm</a>
+      </aside>
+
+      <article class="research-article">
+        <section id="bao-phu">
+          <p class="article-index">01</p>
+          <h2>Độ bao phủ hiện tại</h2>
+          <div id="coverage-table" class="table-wrap">
+            <p>Đang đọc manifest dữ liệu...</p>
+          </div>
+          <p>
+            Số kỳ chưa xác nhận được giữ riêng để bảo toàn dấu vết các khoảng mã không
+            phát hành hoặc chưa thể xác minh. Báo cáo thống kê mặc định không dùng các dòng này.
+          </p>
+        </section>
+
+        <section id="nguon">
+          <p class="article-index">02</p>
+          <h2>Nguồn và thứ tự ưu tiên</h2>
+          <ol class="source-order">
+            <li><strong>Trang công khai chính thức Vietlott</strong><span>Kết quả, trang chi tiết, PDF và thông tin giải.</span></li>
+            <li><strong>Nguồn công khai dự phòng</strong><span>Chỉ dùng khi máy GitHub không truy cập được nguồn chính thức.</span></li>
+            <li><strong>Đối chiếu lại</strong><span>Bản ghi dự phòng được thay hoặc xác nhận khi nguồn chính thức hoạt động.</span></li>
+          </ol>
+          <p>
+            Collector ưu tiên HTTP và endpoint AjaxPro. Trình duyệt tự động không nằm
+            trong đường thu thập thường xuyên. Mỗi request có delay, jitter, retry và
+            tôn trọng tín hiệu <code>Retry-After</code>.
+          </p>
+        </section>
+
+        <section id="schema">
+          <p class="article-index">03</p>
+          <h2>Schema kỳ quay</h2>
+          <div class="code-block">
+            <code>product, draw_id, draw_date, draw_status, result_json,<br>
+            attributes_json, official_pdf_urls_json, source_url,<br>
+            prize_status, validation_status, validation_warnings_json, fetched_at</code>
+          </div>
+          <h3>Kết quả có cấu trúc theo họ sản phẩm</h3>
+          <div class="schema-grid">
+            <article><strong>Tập số</strong><code>{"numbers":[...],"special_numbers":[...]}</code></article>
+            <article><strong>Bingo18</strong><code>{"digits":[4,4,3]}</code></article>
+            <article><strong>Max 3D</strong><code>{"tiers":{"special":[...],"first":[...]}}</code></article>
+            <article><strong>Max 4D</strong><code>{"tiers":{"first":[...],"second":[...]}}</code></article>
+          </div>
+          <p>
+            JSON giữ được cấu trúc khác nhau mà không tạo hàng chục cột rỗng. Các cột
+            khóa, ngày, trạng thái và nguồn vẫn ở dạng phẳng để lọc nhanh.
+          </p>
+        </section>
+
+        <section id="tai">
+          <p class="article-index">04</p>
+          <h2>Tải và đọc dữ liệu</h2>
+          <div class="download-grid">
+            <a href="https://github.com/NhanAZ/vietlott-data-research/tree/main/datasets/draws">
+              <span>CSV kỳ quay</span><strong>datasets/draws</strong>
+            </a>
+            <a href="https://github.com/NhanAZ/vietlott-data-research/tree/main/datasets/prizes">
+              <span>CSV giải thưởng</span><strong>datasets/prizes</strong>
+            </a>
+            <a href="https://github.com/NhanAZ/vietlott-data-research/blob/main/datasets/metadata/dataset-summary.json">
+              <span>Manifest kiểm toán</span><strong>dataset-summary.json</strong>
+            </a>
+          </div>
+          <p>Kết hợp các phân vùng thành hai CSV làm việc</p>
+          <pre><code>vietlott-repository-data hydrate --source-dir datasets --destination-dir data</code></pre>
+          <p>Đọc bằng pandas và loại kỳ chưa xác nhận</p>
+          <pre><code>import pandas as pd
+
+draws = pd.read_csv(
+    "data/draws.csv",
+    dtype={"product": "string", "draw_id": "string"},
+)
+sample = draws.loc[draws["draw_status"] == "confirmed"].copy()</code></pre>
+        </section>
+
+        <section id="tai-lap">
+          <p class="article-index">05</p>
+          <h2>Tái lập website và báo cáo</h2>
+          <p>
+            Toàn bộ JSON biểu đồ và sổ dự đoán được tạo bởi package
+            <code>vietlott_analytics</code>. Giao diện không tính lại thống kê trong
+            trình duyệt và không tải CSV lớn.
+          </p>
+          <pre><code>vietlott-research-report \
+  --datasets-dir datasets \
+  --site-dir site \
+  --prediction-ledger predictions/ledger.jsonl</code></pre>
+          <p>
+            Workflow cập nhật chạy collector, kiểm định dataset, sinh lại báo cáo,
+            cập nhật sổ dự đoán rồi mới commit. GitHub Pages triển khai từ thư mục
+            <code>site</code> sau khi CI hoàn tất.
+          </p>
+        </section>
+
+        <section id="phap-ly">
+          <p class="article-index">06</p>
+          <h2>Pháp lý, nguồn gốc và trách nhiệm</h2>
+          <p>
+            Dự án lưu sự kiện kết quả và thông tin nguồn công khai cho mục đích cá
+            nhân, học tập và nghiên cứu. Dự án không sao chép logo, giao diện, video
+            hoặc nội dung biên tập của nguồn.
+          </p>
+          <p>
+            Repo không liên kết, đại diện hoặc được bảo trợ bởi Vietlott, MoMo hay
+            đơn vị phát hành. Người sử dụng phải tự kiểm tra điều khoản và pháp luật
+            áp dụng. Nội dung không phải tư vấn pháp lý hoặc tài chính.
+          </p>
+          <p class="callout warning">
+            Xổ số có rủi ro tài chính và chỉ dành cho người đủ điều kiện theo pháp luật.
+            Dữ liệu lịch sử và mô hình trong repo không bảo đảm khả năng trúng thưởng.
+          </p>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div><span class="brand-mark">VDR</span><p>Dữ liệu có nguồn, có trạng thái và có thể tạo lại.</p></div>
+      <div><strong>Đi tiếp</strong><a href="index.html">Báo cáo tương tác</a><a href="phuong-phap.html">Phương pháp</a></div>
+      <div><strong>Giấy phép</strong><p>Mã nguồn MIT. Dữ liệu gốc vẫn chịu quyền và điều kiện của nguồn.</p></div>
+    </div>
+  </footer>
+</body>
+</html>

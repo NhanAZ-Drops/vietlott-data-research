@@ -10,6 +10,8 @@ build/
 *.egg-info/
 
 data/
+!site/data/
+!site/data/**
 logs/
 _sources/
 tmp/

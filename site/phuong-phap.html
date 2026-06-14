@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Phương pháp thống kê và đánh giá dự đoán của Vietlott Data Research.">
+  <meta name="theme-color" content="#102a2b">
+  <title>Phương pháp nghiên cứu | Vietlott Data Research</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">VDR</span>
+      <span class="brand-copy">Vietlott<br>Data Research</span>
+    </a>
+    <nav class="site-nav document-nav" aria-label="Điều hướng chính">
+      <a href="index.html">Báo cáo</a>
+      <a href="phuong-phap.html" aria-current="page">Phương pháp</a>
+      <a href="du-lieu.html">Dữ liệu</a>
+      <a class="nav-github" href="https://github.com/NhanAZ/vietlott-data-research">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main" class="document-shell">
+    <header class="document-hero">
+      <p class="eyebrow">Phương pháp phiên bản 1.0.0</p>
+      <h1>Đo sai lệch trước khi kể câu chuyện.</h1>
+      <p>
+        Trang này mô tả cách chọn mẫu, công thức, giả định, quy tắc dự đoán và
+        những điều dữ liệu hiện tại không thể kết luận.
+      </p>
+    </header>
+
+    <div class="document-layout">
+      <aside class="document-toc">
+        <strong>Mục lục</strong>
+        <a href="#cau-hoi">Câu hỏi nghiên cứu</a>
+        <a href="#mau">Mẫu phân tích</a>
+        <a href="#tan-suat">Tần suất và đồng đều</a>
+        <a href="#thoi-gian">Thời gian và mùa vụ</a>
+        <a href="#cau-truc">Cấu trúc tổ hợp</a>
+        <a href="#du-doan">Dự đoán và backtest</a>
+        <a href="#gioi-han">Giới hạn</a>
+        <a href="#thuat-ngu">Thuật ngữ</a>
+      </aside>
+
+      <article class="research-article">
+        <section id="cau-hoi">
+          <p class="article-index">01</p>
+          <h2>Câu hỏi nghiên cứu</h2>
+          <p>
+            Giả thuyết ban đầu là một hệ quay cơ học có thể chịu sai lệch rất nhỏ
+            từ khối lượng bi, bề mặt, độ mòn, luồng khí, rung động hoặc môi trường.
+            Với trò chơi điện tử, giả thuyết phù hợp hơn là chuỗi số có đáp ứng các
+            đặc tính của một quá trình giả ngẫu nhiên hay không.
+          </p>
+          <div class="hypothesis-grid">
+            <div>
+              <strong>H0</strong>
+              <p>Tần suất biên phù hợp với mô hình đồng đều trong giới hạn sai số lấy mẫu.</p>
+            </div>
+            <div>
+              <strong>H1</strong>
+              <p>Có sai lệch đủ lớn, ổn định và lặp lại ngoài mẫu để bác bỏ H0.</p>
+            </div>
+          </div>
+          <p class="callout">
+            Một hệ vật lý có thể tất định ở cấp vi mô nhưng vẫn không dự đoán được
+            trong thực tế. "Không ngẫu nhiên tuyệt đối" không đồng nghĩa "có lợi thế dự báo".
+          </p>
+        </section>
+
+        <section id="mau">
+          <p class="article-index">02</p>
+          <h2>Mẫu phân tích và chất lượng dữ liệu</h2>
+          <p>
+            Mỗi phép phân tích mặc định chỉ dùng bản ghi có
+            <code>draw_status=confirmed</code>. Các kỳ chưa được xác nhận vẫn được giữ
+            để kiểm toán nhưng bị loại khỏi mẫu. Khóa kỳ quay là cặp
+            <code>(product, draw_id)</code>.
+          </p>
+          <ul class="research-list">
+            <li>Kiểm tra miền số, số lượng phần tử và tính duy nhất theo luật trò chơi</li>
+            <li>Loại bản ghi trùng và kiểm tra giải thưởng mồ côi</li>
+            <li>Giữ nguồn, thời điểm đọc và URL kỳ quay để truy vết</li>
+            <li>Phân biệt nguồn chính thức với bản ghi chờ đối chiếu</li>
+            <li>Không tự suy diễn rằng một mã kỳ phải tồn tại chỉ vì nằm giữa hai mã khác</li>
+          </ul>
+        </section>
+
+        <section id="tan-suat">
+          <p class="article-index">03</p>
+          <h2>Tần suất, khoảng tin cậy và đồng đều</h2>
+          <p>
+            Với trò chơi chọn <em>k</em> số từ <em>N</em> số, xác suất biên của một số
+            cụ thể trong mỗi kỳ là <code>p = k / N</code>. Sau <em>n</em> kỳ, số lần
+            xuất hiện kỳ vọng là <code>E = n × p</code>.
+          </p>
+          <div class="formula-card">
+            <span>Độ lệch chuẩn hóa</span>
+            <strong>z = (quan sát - n × p) / √(n × p × (1 - p))</strong>
+          </div>
+          <p>
+            Mỗi số còn có khoảng tin cậy Wilson 95%. Khi kiểm tra đồng thời nhiều
+            số, báo cáo dùng Benjamini-Hochberg để kiểm soát tỷ lệ phát hiện sai.
+            Giá trị p thô không được dùng một mình để gắn nhãn "bất thường".
+          </p>
+          <h3>Kiểm định chi bình phương</h3>
+          <p>
+            Tổng thể tần suất được so với phân phối đồng đều bằng thống kê chi bình
+            phương. Vì dữ liệu chọn không hoàn lại làm các số trong cùng kỳ phụ thuộc,
+            giá trị p trên web là xấp xỉ mô tả. Cohen's w được báo cùng để đo độ lớn.
+          </p>
+          <div class="scale-table">
+            <div><span>w &lt; 0,05</span><strong>Rất nhỏ</strong></div>
+            <div><span>0,05 đến 0,10</span><strong>Nhỏ</strong></div>
+            <div><span>0,10 đến 0,30</span><strong>Vừa</strong></div>
+            <div><span>w ≥ 0,30</span><strong>Lớn</strong></div>
+          </div>
+          <h3>Entropy chuẩn hóa</h3>
+          <p>
+            Entropy bằng 1 khi tần suất hoàn toàn đều. Giá trị gần 1 không chứng minh
+            cơ chế hoàn hảo, nhưng cho thấy phân bố biên khó phân biệt với đồng đều.
+          </p>
+        </section>
+
+        <section id="thoi-gian">
+          <p class="article-index">04</p>
+          <h2>Độ vắng, thời gian và mùa vụ</h2>
+          <p>
+            "Lâu chưa xuất hiện" được đo bằng số kỳ quay, không chỉ bằng ngày lịch.
+            Cách này không làm Keno có vẻ vắng lâu hơn hoặc ngắn hơn chỉ vì lịch quay
+            dày hơn sản phẩm khác.
+          </p>
+          <p>
+            Tần suất theo tháng và theo thứ trong tuần luôn được chia cho số kỳ thực tế
+            trong từng nhóm. Biểu đồ tháng chỉ là mô tả mùa vụ. Nó chưa phải phép kiểm
+            tra nhiệt độ vì dataset hiện không có nhiệt độ, độ ẩm, địa điểm máy, mã máy
+            hoặc mã bộ bi.
+          </p>
+          <div class="callout warning">
+            Muốn kiểm tra giả thuyết nhiệt độ cần ghép dữ liệu khí tượng theo địa điểm
+            và thời gian quay, công bố trước mô hình hồi quy, kiểm soát thay đổi thiết bị
+            và đánh giá ngoài mẫu. So sánh 12 cột tháng không đủ để kết luận nhân quả.
+          </div>
+        </section>
+
+        <section id="cau-truc">
+          <p class="article-index">05</p>
+          <h2>Cấu trúc tổ hợp và vị trí</h2>
+          <p>
+            Báo cáo theo dõi tổng, độ trải, chẵn lẻ, số cặp liên tiếp, cặp đồng xuất
+            hiện và phân bố theo vị trí. Với Mega, Power, Lotto và Keno, kết quả được
+            công bố theo thứ tự tăng dần. Vì vậy "vị trí 1" là số nhỏ nhất của tổ hợp,
+            không phải viên bi ra khỏi máy đầu tiên.
+          </p>
+          <p>
+            Mỗi tổ hợp cụ thể hợp lệ có cùng xác suất trong mô hình đồng đều. Một dãy
+            như 01-02-03-04-05-06 không ít khả năng hơn một dãy cụ thể nhìn lộn xộn.
+            Nhóm "các dãy dễ nhận ra" nhỏ hơn rất nhiều so với nhóm "các dãy trông ngẫu nhiên",
+            nên trực giác thường so sánh hai lớp không cùng kích thước.
+          </p>
+        </section>
+
+        <section id="du-doan">
+          <p class="article-index">06</p>
+          <h2>Dự đoán, baseline và chống rò rỉ dữ liệu</h2>
+          <p>
+            Website công bố ba chiến lược cho mỗi sản phẩm đang hoạt động.
+          </p>
+          <div class="strategy-list">
+            <article>
+              <strong>Baseline đồng đều có seed</strong>
+              <p>Chọn đồng đều bằng seed xác định từ sản phẩm, kỳ dữ liệu cuối và phiên bản mô hình.</p>
+            </article>
+            <article>
+              <strong>Tần suất cửa sổ gần</strong>
+              <p>Xếp hạng độ lệch chuẩn hóa trong cửa sổ 200 kỳ, hoặc 1.000 kỳ với Keno.</p>
+            </article>
+            <article>
+              <strong>Tín hiệu cân bằng</strong>
+              <p>Kết hợp tần suất gần, độ lệch toàn lịch sử và độ vắng với trọng số cố định.</p>
+            </article>
+          </div>
+          <div class="formula-card">
+            <span>Điểm cân bằng cho tập số</span>
+            <strong>0,55 × z_gần - 0,25 × z_toàn_kỳ + 0,12 × độ_vắng_chuẩn_hóa</strong>
+          </div>
+          <h3>Sổ sự kiện bất biến</h3>
+          <p>
+            File <code>predictions/ledger.jsonl</code> là sổ append-only. Sự kiện
+            <code>prediction</code> ghi dự báo trước. Khi có kỳ mới, chương trình thêm
+            một sự kiện <code>evaluation</code> tham chiếu dự báo cũ, thay vì sửa dòng cũ.
+          </p>
+          <h3>Backtest cuốn chiếu</h3>
+          <p>
+            Tại kỳ kiểm tra <em>t</em>, mô hình chỉ được dùng dữ liệu trước <em>t</em>.
+            Mỗi dự báo được so với baseline đồng đều dùng seed độc lập. Chênh lệch số
+            trùng được đánh giá bằng phép kiểm tra ghép cặp xấp xỉ chuẩn.
+          </p>
+          <p class="callout">
+            Backtest tốt vẫn có thể là overfitting. Bằng chứng mạnh hơn phải đến từ
+            chuỗi dự báo được đóng băng sau khi thuật toán đã cố định.
+          </p>
+        </section>
+
+        <section id="gioi-han">
+          <p class="article-index">07</p>
+          <h2>Giới hạn hiện tại</h2>
+          <ul class="research-list">
+            <li>Không có metadata máy quay, bộ bi, bảo trì, địa điểm và môi trường</li>
+            <li>Kiểm định chi bình phương hiện dùng p-value xấp xỉ</li>
+            <li>Các kết quả nhiều hạng giải trong Max 3D không hoàn toàn độc lập</li>
+            <li>Phân tích cặp là hậu nghiệm và có rủi ro chọn mẫu đẹp</li>
+            <li>Sổ dự đoán mới bắt đầu nên số lượt đánh giá ngoài mẫu còn ít</li>
+            <li>Dữ liệu lịch sử không bảo đảm quy trình tương lai giữ nguyên</li>
+          </ul>
+        </section>
+
+        <section id="thuat-ngu">
+          <p class="article-index">08</p>
+          <h2>Thuật ngữ cho người mới</h2>
+          <dl class="glossary">
+            <div><dt>Baseline</dt><dd>Mốc đơn giản phải vượt qua. Ở đây là chọn đồng đều.</dd></div>
+            <div><dt>p-value</dt><dd>Mức độ dữ liệu khó xảy ra nếu mô hình tham chiếu đúng, không phải xác suất mô hình đúng.</dd></div>
+            <div><dt>Kích thước hiệu ứng</dt><dd>Độ lớn thực tế của khác biệt, tách khỏi ảnh hưởng của cỡ mẫu.</dd></div>
+            <div><dt>Entropy</dt><dd>Thước đo mức phân tán. Gần 1 nghĩa là tần suất gần đồng đều.</dd></div>
+            <div><dt>FDR</dt><dd>Cách kiểm soát tỷ lệ phát hiện sai khi thử nhiều giả thuyết cùng lúc.</dd></div>
+            <div><dt>Rò rỉ dữ liệu</dt><dd>Khi thông tin tương lai vô tình đi vào bước huấn luyện hoặc chọn mô hình.</dd></div>
+          </dl>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div><span class="brand-mark">VDR</span><p>Phương pháp được viết để có thể phản biện và tái lập.</p></div>
+      <div><strong>Đi tiếp</strong><a href="index.html">Báo cáo tương tác</a><a href="du-lieu.html">Dữ liệu</a></div>
+      <div><strong>Lưu ý</strong><p>Không phải hệ thống bảo đảm trúng thưởng hoặc tư vấn tài chính.</p></div>
+    </div>
+  </footer>
+</body>
+</html>

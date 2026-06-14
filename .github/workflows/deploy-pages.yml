@@ -1,0 +1,70 @@
+name: Triển khai website thống kê
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-pages.yml"
+      - "site/**"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Đóng gói website
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v6
+
+      - name: Cài Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Cài chương trình
+        run: python -m pip install -e ".[dev]"
+
+      - name: Kiểm tra mã nguồn và dữ liệu
+        run: |
+          python -m ruff check .
+          python -m pytest
+          vietlott-repository-data validate --source-dir datasets
+          vietlott-research-report \
+            --datasets-dir datasets \
+            --site-dir site \
+            --prediction-ledger predictions/ledger.jsonl
+          git diff --exit-code -- predictions site/data
+
+      - name: Cấu hình GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Đóng gói website
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: Triển khai
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Triển khai GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

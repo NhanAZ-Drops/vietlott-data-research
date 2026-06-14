@@ -35,6 +35,19 @@ SQLite working store
 Repository data publisher
  |
  `-- datasets phân vùng theo sản phẩm và tháng
+ |
+ v
+Vietlott analytics
+ |
+ |-- báo cáo thống kê theo từng họ sản phẩm
+ |-- backtest cuốn chiếu với baseline đồng đều
+ |-- sổ dự đoán append-only
+ `-- JSON gọn cho biểu đồ
+ |
+ v
+GitHub Pages
+ |
+ `-- website tĩnh trong thư mục site
 ```
 
 ## Thành phần
@@ -62,6 +75,11 @@ ghép lại khi chạy workflow và kiểm tra toàn vẹn.
 
 `incremental_update.py` đọc kỳ mới, đối chiếu lại các trang gần nhất, áp dụng danh
 sách ngoại lệ chính thức, xuất dữ liệu và báo cáo kiểm toán.
+
+Package `vietlott_analytics` đọc từng sản phẩm riêng để giới hạn bộ nhớ. Package
+tạo thống kê mô tả, kiểm định đồng đều, backtest cuốn chiếu và dữ liệu JSON cho
+website. Sổ `predictions/ledger.jsonl` chỉ thêm sự kiện mới. Dự đoán cũ không bị
+sửa khi có kết quả thật.
 
 ## Khóa dữ liệu
 

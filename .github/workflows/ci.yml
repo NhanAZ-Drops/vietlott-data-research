@@ -33,3 +33,11 @@ jobs:
 
       - name: Kiểm tra dataset
         run: vietlott-repository-data validate --source-dir datasets
+
+      - name: Tạo lại báo cáo và kiểm tra tính tái lập
+        run: |
+          vietlott-research-report \
+            --datasets-dir datasets \
+            --site-dir site \
+            --prediction-ledger predictions/ledger.jsonl
+          git diff --exit-code -- predictions site/data

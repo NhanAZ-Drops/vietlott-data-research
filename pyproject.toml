@@ -35,6 +35,7 @@ vietlott-keno-gap-repair = "vietlott_collector.keno_gap_repair:main"
 vietlott-keno-full-history = "vietlott_collector.keno_full_history:main"
 vietlott-auto-update = "vietlott_collector.incremental_update:main"
 vietlott-repository-data = "vietlott_collector.repository_data:main"
+vietlott-research-report = "vietlott_analytics.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

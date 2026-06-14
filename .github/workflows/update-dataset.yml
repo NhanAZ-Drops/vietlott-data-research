@@ -14,6 +14,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: vietlott-dataset-update
@@ -24,6 +26,8 @@ jobs:
     name: Cập nhật và kiểm tra dữ liệu
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      site_changed: ${{ steps.commit.outputs.changed }}
     env:
       PYTHONUNBUFFERED: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
@@ -77,6 +81,11 @@ jobs:
           vietlott-repository-data validate \
             --source-dir datasets \
             > "$report_dir/validation-report.json"
+          vietlott-research-report \
+            --datasets-dir datasets \
+            --site-dir site \
+            --prediction-ledger predictions/ledger.jsonl \
+            > "$report_dir/research-report.json"
 
       - name: Ghi tóm tắt lần cập nhật
         if: always()
@@ -99,11 +108,13 @@ jobs:
           retention-days: 14
 
       - name: Commit khi dữ liệu thay đổi
+        id: commit
         shell: bash
         run: |
-          git add datasets
+          git add datasets predictions site/data
           if git diff --cached --quiet; then
             echo "Không có kỳ mới hoặc thay đổi chính thức"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -111,7 +122,35 @@ jobs:
           git commit -m "data: cập nhật kết quả Vietlott"
           git pull --rebase origin main
           git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Cấu hình GitHub Pages
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/configure-pages@v6
+
+      - name: Đóng gói website
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
 
       - name: Báo lỗi nguồn sau khi bảo toàn dữ liệu hợp lệ
         if: steps.update.outcome == 'failure'
         run: exit 1
+
+  deploy:
+    name: Triển khai báo cáo thống kê
+    needs: update
+    if: always() && needs.update.outputs.site_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Triển khai GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -73,11 +73,13 @@ dữ liệu ngừng cập nhật bất thường.
 7. Áp dụng danh sách kỳ không được xác nhận.
 8. Kiểm tra trùng, thiếu, JSON, khóa ngoại và kích thước tệp.
 9. Chia lại dữ liệu theo sản phẩm và tháng.
-10. Ghi bảng tóm tắt vào trang run và lưu báo cáo JSON dưới dạng artifact trong 14 ngày.
-11. Commit và push chỉ khi `datasets` thay đổi.
+10. Tạo lại báo cáo thống kê và cập nhật sổ dự đoán.
+11. Ghi bảng tóm tắt vào trang run và lưu báo cáo JSON dưới dạng artifact trong 14 ngày.
+12. Commit `datasets`, `predictions` và `site/data` khi có thay đổi.
+13. Đóng gói và triển khai GitHub Pages từ cùng lượt cập nhật.
 
 Hai workflow dùng cùng một concurrency group nên không ghi đè nhau. Quyền
-`GITHUB_TOKEN` chỉ cấp `contents: write`.
+`GITHUB_TOKEN` được giới hạn ở `contents: write`, `pages: write` và `id-token: write`.
 
 Nếu nguồn lỗi nhưng một sản phẩm khác đã cập nhật hợp lệ, workflow vẫn kiểm tra và
 lưu phần hợp lệ trước khi báo đỏ. Cách này vừa không mất dữ liệu vừa không che lỗi.
@@ -86,5 +88,5 @@ Lỗi nguồn Vietlott được ghi riêng trong `official_source_errors`. Workf
 báo đỏ khi cả Vietlott và nguồn dự phòng đều không cung cấp được một trang hợp lệ.
 
 Commit do `GITHUB_TOKEN` tạo không kích hoạt workflow khác. Vì vậy mỗi workflow
-cập nhật tự kiểm tra dữ liệu trước khi push. Website tĩnh trong tương lai nên được
-triển khai ngay trong workflow cập nhật hoặc qua sự kiện `workflow_run`.
+cập nhật tự kiểm tra dữ liệu, tạo báo cáo và triển khai website trong cùng một lượt.
+Workflow `deploy-pages.yml` xử lý riêng các thay đổi giao diện được push trực tiếp.
