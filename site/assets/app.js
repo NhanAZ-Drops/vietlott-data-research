@@ -96,9 +96,13 @@ async function renderProjectVerdict(products) {
     .filter((result) => result.status === "fulfilled")
     .map((result) => result.value)
     .filter((report) => report.backtest?.status === "complete");
-  const wins = reports.filter(
-    (report) => report.backtest.comparison?.beats_baseline,
-  ).length;
+  const wins = reports.filter((report) => {
+    const backtest = report.backtest;
+    return (
+      backtest.comparison?.beats_baseline
+      || backtest.audit_comparison?.beats_baseline
+    );
+  }).length;
 
   if (!reports.length) {
     text("verdict-backtest-count", "Chưa đủ dữ liệu");
@@ -875,43 +879,60 @@ function renderBacktest(backtest, kind) {
     container.innerHTML = '<p class="method-note">Chưa đủ dữ liệu để backtest.</p>';
     return;
   }
-  const modelValue =
-    kind === "number_set"
-      ? backtest.model.average_hits
-      : backtest.model.average_best_position_matches;
   const baselineValue =
     kind === "number_set"
       ? backtest.baseline.average_hits
       : backtest.baseline.average_best_position_matches;
   const unit = kind === "number_set" ? "số trùng mỗi kỳ" : "vị trí trùng tốt nhất";
-  const comparisonValue =
-    kind === "number_set"
-      ? backtest.comparison.mean_hit_difference
-      : backtest.comparison.mean_position_match_difference;
-  const conclusion = backtest.comparison.beats_baseline
-    ? "Trong bài thử này, cách kết hợp dấu hiệu đang tốt hơn mốc ngẫu nhiên, nhưng chưa đủ để khuyên chọn số."
-    : "Kết luận: cách kết hợp dấu hiệu chưa tốt hơn chọn ngẫu nhiên.";
+  const modelRows = [
+    {
+      label: "Kết hợp ba dấu hiệu",
+      model: backtest.model,
+      comparison: backtest.comparison,
+    },
+    backtest.audit_model && backtest.audit_comparison
+      ? {
+          label: "Khai thác kiểm định công bằng",
+          model: backtest.audit_model,
+          comparison: backtest.audit_comparison,
+        }
+      : null,
+  ].filter(Boolean);
+  const conclusion = modelRows.some((row) => row.comparison?.beats_baseline)
+    ? "Có ít nhất một strategy vượt mốc ngẫu nhiên trong backtest, nhưng vẫn phải xác nhận bằng dự đoán đã lưu trước."
+    : "Kết luận: các strategy hiện tại chưa tốt hơn chọn ngẫu nhiên một cách đáng tin cậy.";
   container.innerHTML = `
     <div class="backtest-score">
-      <div class="backtest-side model">
-        <span>Kết hợp ba dấu hiệu</span>
-        <strong>${formatDecimal(modelValue, 3)}</strong>
-        <small>${escapeHtml(unit)}</small>
-      </div>
-      <span class="backtest-vs">SO VỚI</span>
+      ${modelRows.map((row) => {
+        const value = kind === "number_set"
+          ? row.model.average_hits
+          : row.model.average_best_position_matches;
+        return `
+          <div class="backtest-side model">
+            <span>${escapeHtml(row.label)}</span>
+            <strong>${formatDecimal(value, 3)}</strong>
+            <small>${escapeHtml(unit)}</small>
+          </div>`;
+      }).join("")}
       <div class="backtest-side">
-        <span>Chọn ngẫu nhiên</span>
+        <span>Mốc chọn ngẫu nhiên</span>
         <strong>${formatDecimal(baselineValue, 3)}</strong>
         <small>${escapeHtml(unit)}</small>
       </div>
     </div>
     <p class="backtest-verdict">${escapeHtml(conclusion)}</p>
-    <p class="backtest-evidence">
-      <span>Đối chiếu thống kê</span>
-      Chênh lệch ${formatSigned(comparisonValue)}, mức bất thường xấp xỉ
-      ${formatPValue(backtest.comparison.approximate_p_value)} trên
-      ${numberFormatter.format(backtest.samples)} kỳ kiểm tra.
-    </p>`;
+    ${modelRows.map((row) => {
+      const comparisonValue = kind === "number_set"
+        ? row.comparison.mean_hit_difference
+        : row.comparison.mean_position_match_difference;
+      return `
+        <p class="backtest-evidence">
+          <span>${escapeHtml(row.label)}</span>
+          Chênh lệch ${formatSigned(comparisonValue)}, mức bất thường xấp xỉ
+          ${formatPValue(row.comparison.approximate_p_value)} trên
+          ${numberFormatter.format(backtest.samples)} kỳ kiểm tra.
+        </p>`;
+    }).join("")}`;
 }
 
 function renderPrizeReport(prizes) {
@@ -1011,7 +1032,7 @@ function renderPredictionCards(slug) {
           </div>`
         : `<div class="prediction-sequence">${escapeHtml(prediction.prediction.sequence)}</div>`;
       return `
-        <article class="prediction-card${prediction.strategy === "balanced_signal" ? " primary" : ""}">
+        <article class="prediction-card${prediction.strategy === "audit_signal" ? " primary" : ""}">
           <span class="strategy-name">${escapeHtml(copy.title)}</span>
           <p class="strategy-description">${escapeHtml(copy.description)}</p>
           ${output}
@@ -1205,6 +1226,10 @@ function predictionStrategyCopy(strategy) {
     balanced_signal: {
       title: "Kết hợp ba dấu hiệu lịch sử",
       description: "Gộp tần suất gần đây, toàn lịch sử và số kỳ vắng mặt.",
+    },
+    audit_signal: {
+      title: "Khai thác kiểm định công bằng",
+      description: "Ưu tiên lệch tần suất, vị trí hoặc cặp số đang bị bộ kiểm định đưa vào diện theo dõi.",
     },
   };
   return copy[strategy] || {

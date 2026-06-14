@@ -5,8 +5,11 @@ import json
 import math
 import random
 from collections import Counter, defaultdict, deque
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from heapq import nlargest
+from itertools import combinations
 from pathlib import Path
 from statistics import NormalDist, fmean, stdev
 from typing import Any
@@ -14,15 +17,23 @@ from typing import Any
 from .catalog import AnalysisKind, AnalyticsProduct
 from .io import Observation, ProductDataset
 
-MODEL_VERSION = "1.1.0"
+MODEL_VERSION = "1.2.0"
 NUMBER_SCORE_POLICY = (
     "recent=0.6*short+0.4*recent; "
     "balanced=0.4*short+0.3*recent-0.15*long+0.15*overdue"
+)
+AUDIT_NUMBER_SCORE_POLICY = (
+    "audit=0.45*long_hot+0.25*recent+0.15*short+0.15*pair_pressure; "
+    "greedy pair-aware selection"
 )
 DIGIT_SCORE_POLICY = (
     "recent=0.6*short+0.4*recent; "
     "balanced=0.4*short+0.3*recent-0.2*long"
 )
+AUDIT_DIGIT_SCORE_POLICY = (
+    "audit=0.45*long_hot+0.35*recent+0.20*short"
+)
+PAIR_WINDOW_LIMIT = 5000
 NORMAL = NormalDist()
 
 
@@ -315,6 +326,9 @@ def _number_forecasts(dataset: ProductDataset) -> list[dict[str, Any]]:
     short_counts = Counter(
         value for item in observations[-short_window:] for value in item.values
     )
+    pair_window = min(PAIR_WINDOW_LIMIT, len(observations))
+    pair_counts = _number_pair_counts(observations[-pair_window:])
+    pair_scores = _number_pair_scores_from_counts(product, pair_counts, pair_window)
     last_seen: dict[int, int] = {}
     for index, item in enumerate(observations):
         for value in item.values:
@@ -330,10 +344,17 @@ def _number_forecasts(dataset: ProductDataset) -> list[dict[str, Any]]:
         last_seen,
         len(observations),
     )
+    _apply_audit_number_scores(scores, pair_scores)
     seed = f"{product.slug}|{dataset.latest.draw_id}|{MODEL_VERSION}"
     uniform = _uniform_number_pick(product, seed)
     balanced = _top_numbers(scores, "balanced", product.pick_count or 0, seed)
     recent = _top_numbers(scores, "recent", product.pick_count or 0, seed)
+    audit_signal = _audit_number_pick(
+        scores,
+        pair_scores,
+        product.pick_count or 0,
+        seed + "|audit",
+    )
 
     special_predictions = _special_forecasts(dataset, seed)
     result = []
@@ -341,7 +362,13 @@ def _number_forecasts(dataset: ProductDataset) -> list[dict[str, Any]]:
         ("uniform_seeded", "Baseline đồng đều có seed", uniform),
         ("balanced_signal", "Tín hiệu cân bằng", balanced),
         ("recent_frequency", "Tần suất cửa sổ gần", recent),
+        ("audit_signal", "Tín hiệu kiểm định công bằng", audit_signal),
     ):
+        score_policy = (
+            AUDIT_NUMBER_SCORE_POLICY
+            if strategy == "audit_signal"
+            else NUMBER_SCORE_POLICY
+        )
         result.append(
             {
                 "strategy": strategy,
@@ -354,9 +381,10 @@ def _number_forecasts(dataset: ProductDataset) -> list[dict[str, Any]]:
                     "history_draws": len(observations),
                     "recent_window_draws": recent_window,
                     "short_window_draws": short_window,
+                    "pair_window_draws": pair_window,
                     "selection_count": product.pick_count,
                     "pool_size": product.pool_size,
-                    "score_policy": NUMBER_SCORE_POLICY,
+                    "score_policy": score_policy,
                     "seed_policy": "sha256(product, cutoff, model_version)",
                 },
             }
@@ -392,6 +420,7 @@ def _digit_forecasts(dataset: ProductDataset) -> list[dict[str, Any]]:
     uniform = "".join(str(uniform_rng.choice(symbols)) for _ in range(length))
     recent_mode = _digit_sequence_from_scores(total, recent, short, symbols, "recent", seed)
     balanced = _digit_sequence_from_scores(total, recent, short, symbols, "balanced", seed)
+    audit_signal = _digit_sequence_from_scores(total, recent, short, symbols, "audit", seed)
     return [
         {
             "strategy": "uniform_seeded",
@@ -435,6 +464,20 @@ def _digit_forecasts(dataset: ProductDataset) -> list[dict[str, Any]]:
                 "score_policy": DIGIT_SCORE_POLICY,
             },
         },
+        {
+            "strategy": "audit_signal",
+            "strategy_label": "Tín hiệu kiểm định công bằng",
+            "prediction": {"sequence": audit_signal},
+            "parameters": {
+                "history_draws": len(dataset.observations),
+                "recent_window_draws": len(recent_draws),
+                "short_window_draws": len(short_draws),
+                "sequence_length": length,
+                "symbol_min": product.sequence_min,
+                "symbol_max": product.sequence_max,
+                "score_policy": AUDIT_DIGIT_SCORE_POLICY,
+            },
+        },
     ]
 
 
@@ -459,14 +502,25 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
     recent_counts = Counter(value for item in recent_items for value in item.values)
     short_items = deque(observations[max(0, start - short_window) : start])
     short_counts = Counter(value for item in short_items for value in item.values)
+    pair_window = min(PAIR_WINDOW_LIMIT, len(observations))
+    pair_items = deque(observations[max(0, start - pair_window) : start])
+    pair_counts = _number_pair_counts(pair_items)
 
     model_hits: list[int] = []
+    audit_hits: list[int] = []
     baseline_hits: list[int] = []
     differences: list[float] = []
+    audit_differences: list[float] = []
     model_distribution = Counter()
+    audit_distribution = Counter()
     baseline_distribution = Counter()
     for index in range(start, len(observations)):
         target = observations[index]
+        pair_scores = _number_pair_scores_from_counts(
+            product,
+            pair_counts,
+            len(pair_items),
+        )
         scores = _number_scores(
             product,
             total_counts,
@@ -478,16 +532,27 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             last_seen,
             index,
         )
+        _apply_audit_number_scores(scores, pair_scores)
         seed = f"backtest|{product.slug}|{target.draw_id}|{MODEL_VERSION}"
         model = _top_numbers(scores, "balanced", product.pick_count or 0, seed)
+        audit_model = _audit_number_pick(
+            scores,
+            pair_scores,
+            product.pick_count or 0,
+            seed + "|audit",
+        )
         baseline = _uniform_number_pick(product, seed)
         actual = set(target.values)
         model_hit = len(actual.intersection(model))
+        audit_hit = len(actual.intersection(audit_model))
         baseline_hit = len(actual.intersection(baseline))
         model_hits.append(model_hit)
+        audit_hits.append(audit_hit)
         baseline_hits.append(baseline_hit)
         differences.append(float(model_hit - baseline_hit))
+        audit_differences.append(float(audit_hit - baseline_hit))
         model_distribution[model_hit] += 1
+        audit_distribution[audit_hit] += 1
         baseline_distribution[baseline_hit] += 1
 
         total_counts.update(target.values)
@@ -503,8 +568,14 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         if len(short_items) > short_window:
             expired_short = short_items.popleft()
             short_counts.subtract(expired_short.values)
+        pair_items.append(target)
+        _update_number_pair_counts(pair_counts, target, 1)
+        if len(pair_items) > pair_window:
+            expired_pair = pair_items.popleft()
+            _update_number_pair_counts(pair_counts, expired_pair, -1)
 
     z_score, p_value = _paired_normal_test(differences)
+    audit_z_score, audit_p_value = _paired_normal_test(audit_differences)
     expected_hits = (product.pick_count or 0) ** 2 / product.pool_size
     return {
         "status": "complete",
@@ -515,12 +586,20 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         "minimum_history_draws": start,
         "recent_window_draws": recent_window,
         "short_window_draws": short_window,
+        "pair_window_draws": pair_window,
         "score_policy": NUMBER_SCORE_POLICY,
+        "audit_score_policy": AUDIT_NUMBER_SCORE_POLICY,
         "model": {
             "strategy": "balanced_signal",
             "average_hits": _round(fmean(model_hits)),
             "exact_hits": model_distribution[product.pick_count or 0],
             "hit_distribution": _counter_to_rows(model_distribution),
+        },
+        "audit_model": {
+            "strategy": "audit_signal",
+            "average_hits": _round(fmean(audit_hits)),
+            "exact_hits": audit_distribution[product.pick_count or 0],
+            "hit_distribution": _counter_to_rows(audit_distribution),
         },
         "baseline": {
             "strategy": "uniform_seeded",
@@ -534,6 +613,14 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             "paired_z_score": _round(z_score),
             "approximate_p_value": _round(p_value, 8),
             "beats_baseline": fmean(differences) > 0 and p_value < 0.05,
+        },
+        "audit_comparison": {
+            "mean_hit_difference": _round(fmean(audit_differences)),
+            "paired_z_score": _round(audit_z_score),
+            "approximate_p_value": _round(audit_p_value, 8),
+            "beats_baseline": (
+                fmean(audit_differences) > 0 and audit_p_value < 0.05
+            ),
         },
         "warning": (
             "Backtest cuốn chiếu chỉ dùng dữ liệu trước kỳ kiểm tra. Kết quả vẫn có thể "
@@ -568,19 +655,31 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         _update_digit_counts(short, item.outcomes, 1)
 
     model_exact = 0
+    audit_exact = 0
     baseline_exact = 0
     model_best: list[int] = []
+    audit_best: list[int] = []
     baseline_best: list[int] = []
     for index in range(start, len(observations)):
         target = observations[index]
         seed = f"backtest|{product.slug}|{target.draw_id}|{MODEL_VERSION}"
         model = _digit_sequence_from_scores(total, recent, short, symbols, "balanced", seed)
+        audit_model = _digit_sequence_from_scores(
+            total,
+            recent,
+            short,
+            symbols,
+            "audit",
+            seed,
+        )
         rng = random.Random(_seed_int(seed + "|uniform"))
         baseline = "".join(str(rng.choice(symbols)) for _ in range(length))
         actual = set(target.outcomes)
         model_exact += model in actual
+        audit_exact += audit_model in actual
         baseline_exact += baseline in actual
         model_best.append(_best_position_match(model, actual))
+        audit_best.append(_best_position_match(audit_model, actual))
         baseline_best.append(_best_position_match(baseline, actual))
 
         _update_digit_counts(total, target.outcomes, 1)
@@ -601,7 +700,12 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         float(model - baseline)
         for model, baseline in zip(model_best, baseline_best, strict=True)
     ]
+    audit_differences = [
+        float(model - baseline)
+        for model, baseline in zip(audit_best, baseline_best, strict=True)
+    ]
     z_score, p_value = _paired_normal_test(differences)
+    audit_z_score, audit_p_value = _paired_normal_test(audit_differences)
     average_outcomes = fmean(len(item.outcomes) for item in observations[start:])
     expected_exact_rate = min(1.0, average_outcomes / (len(symbols) ** length))
     return {
@@ -616,11 +720,18 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
         "symbol_min": product.sequence_min,
         "symbol_max": product.sequence_max,
         "score_policy": DIGIT_SCORE_POLICY,
+        "audit_score_policy": AUDIT_DIGIT_SCORE_POLICY,
         "model": {
             "strategy": "balanced_signal",
             "exact_hits": model_exact,
             "exact_hit_rate": _round(model_exact / samples),
             "average_best_position_matches": _round(fmean(model_best)),
+        },
+        "audit_model": {
+            "strategy": "audit_signal",
+            "exact_hits": audit_exact,
+            "exact_hit_rate": _round(audit_exact / samples),
+            "average_best_position_matches": _round(fmean(audit_best)),
         },
         "baseline": {
             "strategy": "uniform_seeded",
@@ -634,6 +745,14 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             "paired_z_score": _round(z_score),
             "approximate_p_value": _round(p_value, 8),
             "beats_baseline": fmean(differences) > 0 and p_value < 0.05,
+        },
+        "audit_comparison": {
+            "mean_position_match_difference": _round(fmean(audit_differences)),
+            "paired_z_score": _round(audit_z_score),
+            "approximate_p_value": _round(audit_p_value, 8),
+            "beats_baseline": (
+                fmean(audit_differences) > 0 and audit_p_value < 0.05
+            ),
         },
         "warning": (
             "Các kết quả cùng một kỳ ở trò chơi nhiều hạng giải không hoàn toàn là các mẫu "
@@ -677,10 +796,123 @@ def _number_scores(
         draws_since = current_index - 1 - last_seen.get(value, -1)
         overdue_ratio = min(4.0, draws_since * probability)
         scores[value] = {
+            "long_z": long_z,
+            "recent_z": recent_z,
+            "short_z": short_z,
+            "overdue_ratio": overdue_ratio,
             "recent": 0.6 * short_z + 0.4 * recent_z,
-            "balanced": 0.4 * short_z + 0.3 * recent_z - 0.15 * long_z + 0.15 * (overdue_ratio - 1),
+            "balanced": (
+                0.4 * short_z
+                + 0.3 * recent_z
+                - 0.15 * long_z
+                + 0.15 * (overdue_ratio - 1)
+            ),
         }
     return scores
+
+
+def _number_pair_counts(observations: Iterable[Observation]) -> Counter[tuple[int, int]]:
+    counts: Counter[tuple[int, int]] = Counter()
+    for observation in observations:
+        _update_number_pair_counts(counts, observation, 1)
+    return counts
+
+
+def _update_number_pair_counts(
+    counts: Counter[tuple[int, int]],
+    observation: Observation,
+    direction: int,
+) -> None:
+    values = sorted(set(observation.values))
+    for pair in combinations(values, 2):
+        counts[pair] += direction
+        if counts[pair] <= 0:
+            del counts[pair]
+
+
+def _number_pair_scores_from_counts(
+    product: AnalyticsProduct,
+    pair_counts: Counter[tuple[int, int]],
+    draw_count: int,
+) -> dict[tuple[int, int], float]:
+    pick_count = product.pick_count or 0
+    pool_size = product.pool_size
+    if draw_count <= 0 or pick_count < 2 or pool_size < 2:
+        return {}
+    probability = pick_count * (pick_count - 1) / (pool_size * (pool_size - 1))
+    expected = draw_count * probability
+    sd = math.sqrt(max(draw_count * probability * (1 - probability), 1e-12))
+    return {
+        pair: _clip_signal((count - expected) / sd)
+        for pair, count in pair_counts.items()
+    }
+
+
+def _apply_audit_number_scores(
+    scores: dict[int, dict[str, float]],
+    pair_scores: dict[tuple[int, int], float],
+) -> None:
+    pair_pressures = _number_pair_pressures(pair_scores)
+    for value, row in scores.items():
+        pair_pressure = pair_pressures.get(value, 0.0)
+        row["audit_pair_pressure"] = pair_pressure
+        row["audit"] = (
+            0.45 * _clip_signal(row["long_z"])
+            + 0.25 * _clip_signal(row["recent_z"])
+            + 0.15 * _clip_signal(row["short_z"])
+            + 0.15 * pair_pressure
+        )
+
+
+def _number_pair_pressures(
+    pair_scores: dict[tuple[int, int], float],
+) -> dict[int, float]:
+    buckets: dict[int, list[float]] = defaultdict(list)
+    for (left, right), score in pair_scores.items():
+        if score <= 0:
+            continue
+        buckets[left].append(score)
+        buckets[right].append(score)
+    return {
+        value: fmean(nlargest(5, values))
+        for value, values in buckets.items()
+    }
+
+
+def _audit_number_pick(
+    scores: dict[int, dict[str, float]],
+    pair_scores: dict[tuple[int, int], float],
+    count: int,
+    seed: str,
+) -> list[int]:
+    selected: list[int] = []
+    remaining = set(scores)
+    while remaining and len(selected) < count:
+        value = max(
+            remaining,
+            key=lambda candidate: (
+                scores[candidate]["audit"]
+                + 0.12 * _selected_pair_bonus(candidate, selected, pair_scores),
+                _stable_jitter(seed, candidate),
+            ),
+        )
+        selected.append(value)
+        remaining.remove(value)
+    return sorted(selected)
+
+
+def _selected_pair_bonus(
+    value: int,
+    selected: list[int],
+    pair_scores: dict[tuple[int, int], float],
+) -> float:
+    if not selected:
+        return 0.0
+    bonuses = [
+        max(0.0, pair_scores.get(tuple(sorted((value, other))), 0.0))
+        for other in selected
+    ]
+    return fmean(bonuses)
 
 
 def _top_numbers(
@@ -730,6 +962,11 @@ def _special_forecasts(dataset: ProductDataset, seed: str) -> dict[str, list[int
         score_rows[value] = {
             "balanced": 0.4 * short_z + 0.3 * recent_z - 0.2 * long_z,
             "recent": 0.6 * short_z + 0.4 * recent_z,
+            "audit": (
+                0.5 * _clip_signal(long_z)
+                + 0.3 * _clip_signal(recent_z)
+                + 0.2 * _clip_signal(short_z)
+            ),
         }
     rng = random.Random(_seed_int(seed + "|special"))
     return {
@@ -743,6 +980,12 @@ def _special_forecasts(dataset: ProductDataset, seed: str) -> dict[str, list[int
         "recent_frequency": _top_numbers(
             score_rows,
             "recent",
+            product.special_count,
+            seed + "|special",
+        ),
+        "audit_signal": _top_numbers(
+            score_rows,
+            "audit",
             product.special_count,
             seed + "|special",
         ),
@@ -788,11 +1031,16 @@ def _digit_sequence_from_scores(
                 if short_observations
                 else 0
             )
-            score = (
-                0.6 * short_z + 0.4 * recent_z
-                if strategy == "recent"
-                else 0.4 * short_z + 0.3 * recent_z - 0.2 * long_z
-            )
+            if strategy == "recent":
+                score = 0.6 * short_z + 0.4 * recent_z
+            elif strategy == "audit":
+                score = (
+                    0.45 * _clip_signal(long_z)
+                    + 0.35 * _clip_signal(recent_z)
+                    + 0.2 * _clip_signal(short_z)
+                )
+            else:
+                score = 0.4 * short_z + 0.3 * recent_z - 0.2 * long_z
             scores[digit] = score + _stable_jitter(f"{seed}|{position}", digit) * 1e-6
         result.append(str(max(scores, key=scores.get)))
     return "".join(result)
@@ -1051,6 +1299,10 @@ def _counter_to_rows(counter: Counter[int]) -> list[dict[str, int]]:
 def _stable_jitter(seed: str, value: int) -> float:
     digest = hashlib.sha256(f"{seed}|{value}".encode()).digest()
     return int.from_bytes(digest[:8], "big") / 2**64
+
+
+def _clip_signal(value: float, limit: float = 4.0) -> float:
+    return max(-limit, min(limit, value))
 
 
 def _seed_int(seed: str) -> int:

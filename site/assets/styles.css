@@ -1679,7 +1679,7 @@ a {
 
 .backtest-score {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 15px;
   align-items: center;
 }
@@ -1914,7 +1914,7 @@ a {
 
 .prediction-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 

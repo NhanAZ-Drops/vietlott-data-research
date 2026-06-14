@@ -17,10 +17,10 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260615-1" in index
+    assert "assets/app.js?v=20260615-2" in index
     assert "assets/docs.js?v=20260614-2" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260615-1" in page
+        assert "assets/styles.css?v=20260615-2" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -35,7 +35,10 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert '.normalize("NFC")' in app_script
     assert '.normalize("NFC")' in docs_script
     assert "Chọn ngẫu nhiên có thể lặp lại" in app_script
-    assert "Kết luận: cách kết hợp dấu hiệu chưa tốt hơn chọn ngẫu nhiên." in app_script
+    assert (
+        "Kết luận: các strategy hiện tại chưa tốt hơn chọn ngẫu nhiên một cách đáng tin cậy."
+        in app_script
+    )
     assert "renderFairnessAudit" in app_script
     assert "renderAuditVisualLog" in app_script
     assert "audit-test-details" in app_script
@@ -43,6 +46,8 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'text("ribbon-product-count"' in app_script
     assert 'text("exact-predictions"' in app_script
     assert "renderPredictionResults" in app_script
+    assert "audit_signal" in app_script
+    assert "Khai thác kiểm định công bằng" in app_script
     assert "prediction-history-list" in index
     assert "Dự đoán gốc so với kết quả thật" in index
     assert "backtest-evidence" in app_script

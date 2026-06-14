@@ -37,23 +37,29 @@ def test_prediction_ledger_is_idempotent_and_appends_evaluations(tmp_path) -> No
     original_predictions = [
         event.copy() for event in ledger.events if event["event_type"] == "prediction"
     ]
-    assert len(original_predictions) == 3
+    assert len(original_predictions) == 4
+    assert {event["strategy"] for event in original_predictions} == {
+        "audit_signal",
+        "balanced_signal",
+        "recent_frequency",
+        "uniform_seeded",
+    }
 
     ledger.process_product(_dataset(40))
-    assert len(ledger.events) == 3
+    assert len(ledger.events) == 4
 
     ledger.process_product(_dataset(41))
     predictions = [event for event in ledger.events if event["event_type"] == "prediction"]
     evaluations = [event for event in ledger.events if event["event_type"] == "evaluation"]
-    assert len(predictions) == 6
-    assert len(evaluations) == 3
-    assert predictions[:3] == original_predictions
+    assert len(predictions) == 8
+    assert len(evaluations) == 4
+    assert predictions[:4] == original_predictions
     assert all(event["actual_draw_id"] == "00041" for event in evaluations)
     report = ledger.site_report()
     assert report["schema_version"] == 2
-    assert report["evaluation_count"] == 3
+    assert report["evaluation_count"] == 4
     assert report["outcome_summary"]["exact"] == 0
-    assert report["product_outcomes"]["mega645"]["evaluated_predictions"] == 3
+    assert report["product_outcomes"]["mega645"]["evaluated_predictions"] == 4
     assert report["history_limit_per_product"] == 100
     assert report["recent_evaluations"][0]["prediction"]
     assert report["recent_evaluations"][0]["prediction_generated_at"]
@@ -65,7 +71,7 @@ def test_prediction_ledger_is_idempotent_and_appends_evaluations(tmp_path) -> No
 
     ledger.save()
     lines = path.read_text(encoding="utf-8").splitlines()
-    assert len(lines) == 9
+    assert len(lines) == 12
     assert all(json.loads(line)["event_type"] in {"prediction", "evaluation"} for line in lines)
 
 
@@ -76,6 +82,8 @@ def test_walk_forward_backtest_reports_uniform_baseline() -> None:
     assert report["method"] == "walk_forward"
     assert report["samples"] > 0
     assert report["baseline"]["strategy"] == "uniform_seeded"
+    assert report["audit_model"]["strategy"] == "audit_signal"
+    assert "audit_comparison" in report
     assert "approximate_p_value" in report["comparison"]
 
 
