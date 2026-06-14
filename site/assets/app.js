@@ -4,6 +4,8 @@ const state = {
   product: null,
   selectedNumber: null,
   reportCache: new Map(),
+  reportPromises: new Map(),
+  selectionRequestId: 0,
 };
 
 const numberFormatter = new Intl.NumberFormat("vi-VN");
@@ -18,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function initialize() {
+  const initialHash = window.location.hash;
   const [manifest, predictions] = await Promise.all([
     fetchJson("data/manifest.json"),
     fetchJson("data/predictions.json"),
@@ -27,12 +30,25 @@ async function initialize() {
   renderManifest(manifest);
   renderProductTabs(manifest.products);
   renderPredictionShell(predictions, manifest.products);
+  renderProjectVerdict(manifest.products).catch((error) => {
+    console.error("Không tổng hợp được kết luận toàn bộ sản phẩm", error);
+  });
 
   const requested = new URLSearchParams(window.location.search).get("product");
   const initial = manifest.products.some((item) => item.slug === requested)
     ? requested
     : "power655";
   await selectProduct(initial);
+  if (initialHash) {
+    window.requestAnimationFrame(() => {
+      const target = document.querySelector(initialHash);
+      if (!target) return;
+      const previousBehavior = document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = "auto";
+      target.scrollIntoView();
+      document.documentElement.style.scrollBehavior = previousBehavior;
+    });
+  }
 }
 
 function setupMenu() {
@@ -53,6 +69,51 @@ async function fetchJson(url) {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error(`Không đọc được ${url}: HTTP ${response.status}`);
   return response.json();
+}
+
+async function loadProductReport(slug) {
+  if (state.reportCache.has(slug)) return state.reportCache.get(slug);
+  if (state.reportPromises.has(slug)) return state.reportPromises.get(slug);
+  const request = fetchJson(`data/products/${slug}.json`)
+    .then((report) => {
+      state.reportCache.set(slug, report);
+      return report;
+    })
+    .finally(() => state.reportPromises.delete(slug));
+  state.reportPromises.set(slug, request);
+  return request;
+}
+
+async function renderProjectVerdict(products) {
+  const settled = await Promise.allSettled(
+    products.map((product) => loadProductReport(product.slug)),
+  );
+  const reports = settled
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value)
+    .filter((report) => report.backtest?.status === "complete");
+  const wins = reports.filter(
+    (report) => report.backtest.comparison?.beats_baseline,
+  ).length;
+
+  if (!reports.length) {
+    text("verdict-backtest-count", "Chưa đủ dữ liệu");
+    text(
+      "project-verdict-summary",
+      "Chưa đọc được báo cáo để đưa ra kết luận tổng hợp.",
+    );
+    return;
+  }
+
+  text("verdict-backtest-count", `${wins}/${reports.length}`);
+  const conclusion = wins === 0
+    ? `Không phương pháp nào trong ${reports.length} backtest hiện tại vượt cách chọn ngẫu nhiên một cách đáng tin cậy.`
+    : `${wins} trong ${reports.length} phương pháp vượt mốc ngẫu nhiên theo tiêu chí hiện tại, nhưng vẫn cần xác nhận bằng dự đoán đã lưu trước.`;
+  text("project-verdict-summary", conclusion);
+  text(
+    "prediction-current-conclusion",
+    `${conclusion} Các bộ số dưới đây là thí nghiệm, không phải gợi ý mua vé.`,
+  );
 }
 
 function renderManifest(manifest) {
@@ -91,24 +152,30 @@ function renderProductTabs(products) {
 }
 
 async function selectProduct(slug) {
+  const requestId = ++state.selectionRequestId;
+  const product = state.manifest?.products.find((item) => item.slug === slug);
   document.querySelectorAll(".product-tab").forEach((tab) => {
     tab.setAttribute("aria-selected", String(tab.dataset.product === slug));
   });
-  document.getElementById("dashboard-loading").hidden = false;
+  showDashboardLoading(`Đang mở báo cáo ${product?.name || slug}...`);
   document.getElementById("dashboard").hidden = true;
-  let report = state.reportCache.get(slug);
-  if (!report) {
-    report = await fetchJson(`data/products/${slug}.json`);
-    state.reportCache.set(slug, report);
-  }
-  state.product = slug;
-  renderProductReport(report);
-  document.getElementById("dashboard-loading").hidden = true;
-  document.getElementById("dashboard").hidden = false;
+  try {
+    const report = await loadProductReport(slug);
+    if (requestId !== state.selectionRequestId) return;
+    state.product = slug;
+    renderProductReport(report);
+    document.getElementById("dashboard").hidden = false;
 
-  const url = new URL(window.location);
-  url.searchParams.set("product", slug);
-  window.history.replaceState({}, "", url);
+    const url = new URL(window.location);
+    url.searchParams.set("product", slug);
+    window.history.replaceState({}, "", url);
+  } catch (error) {
+    if (requestId === state.selectionRequestId) throw error;
+  } finally {
+    if (requestId === state.selectionRequestId) {
+      document.getElementById("dashboard-loading").hidden = true;
+    }
+  }
 }
 
 function renderProductReport(report) {
@@ -228,9 +295,9 @@ function renderUniformity(uniformity, kind) {
   text("test-explanation", explanation);
 
   const metrics = [
-    ["p xấp xỉ", formatPValue(pValue)],
-    ["Cohen's w", formatDecimal(effect, 4)],
-    ["Entropy chuẩn hóa", formatDecimal(uniformity.normalized_entropy, 6)],
+    ["Mức bất thường (p)", formatPValue(pValue)],
+    ["Độ lệch thực tế", formatDecimal(effect, 4)],
+    ["Mức phân tán đều", formatDecimal(uniformity.normalized_entropy, 6)],
   ];
   document.getElementById("test-metrics").innerHTML = metrics
     .map(
@@ -307,8 +374,8 @@ function renderNumberGrid(numbers) {
 
 function renderNumberProfile(item) {
   const significance = item.q_value_bh < 0.05
-    ? "Còn ý nghĩa sau FDR"
-    : "Không qua ngưỡng FDR 5%";
+    ? "Vẫn nổi bật sau khi kiểm tra nhiều số"
+    : "Chưa đủ nổi bật sau khi kiểm tra nhiều số";
   document.getElementById("number-profile").innerHTML = `
     <div class="profile-number">
       <strong>${String(item.number).padStart(2, "0")}</strong>
@@ -317,8 +384,8 @@ function renderNumberProfile(item) {
     <div class="profile-stats">
       ${profileStat("Số lần xuất hiện", numberFormatter.format(item.count))}
       ${profileStat("Mỗi 100 kỳ", formatDecimal(item.rate_per_100_draws, 2))}
-      ${profileStat("z-score toàn kỳ", formatSigned(item.z_score))}
-      ${profileStat("z-score cửa sổ gần", formatSigned(item.recent_z_score))}
+      ${profileStat("Mức lệch toàn lịch sử", formatSigned(item.z_score))}
+      ${profileStat("Mức lệch trong kỳ gần đây", formatSigned(item.recent_z_score))}
       ${profileStat("Đã vắng", `${numberFormatter.format(item.draws_since)} kỳ`)}
       ${profileStat("Lần cuối", item.last_seen_date ? formatDate(item.last_seen_date) : "Chưa có")}
       ${profileStat("Khoảng vắng lớn nhất", `${numberFormatter.format(item.maximum_gap_draws)} kỳ`)}
@@ -488,7 +555,7 @@ function renderPairTable(pairs) {
   panel.hidden = false;
   const rows = pairs.highest_residuals.slice(0, 10);
   document.getElementById("pair-table").innerHTML = table(
-    ["Cặp", "Số lần", "Kỳ vọng", "Tỷ lệ", "z-score"],
+    ["Cặp", "Số lần", "Kỳ vọng", "Tỷ lệ", "Mức lệch"],
     rows.map((row) => [
       row.pair.map((value) => String(value).padStart(2, "0")).join(" + "),
       numberFormatter.format(row.count),
@@ -615,27 +682,31 @@ function renderBacktest(backtest, kind) {
       ? backtest.comparison.mean_hit_difference
       : backtest.comparison.mean_position_match_difference;
   const conclusion = backtest.comparison.beats_baseline
-    ? "Mô hình đang hơn baseline ở ngưỡng 5%, vẫn cần xác nhận ngoài mẫu."
-    : "Chưa có bằng chứng mô hình hơn baseline đồng đều.";
+    ? "Trong bài thử này, cách kết hợp dấu hiệu đang tốt hơn mốc ngẫu nhiên, nhưng chưa đủ để khuyên chọn số."
+    : "Kết luận: cách kết hợp dấu hiệu chưa tốt hơn chọn ngẫu nhiên.";
   container.innerHTML = `
     <div class="backtest-score">
       <div class="backtest-side model">
-        <span>Tín hiệu cân bằng</span>
+        <span>Kết hợp ba dấu hiệu</span>
         <strong>${formatDecimal(modelValue, 3)}</strong>
         <small>${escapeHtml(unit)}</small>
       </div>
       <span class="backtest-vs">SO VỚI</span>
       <div class="backtest-side">
-        <span>Baseline đồng đều</span>
+        <span>Chọn ngẫu nhiên</span>
         <strong>${formatDecimal(baselineValue, 3)}</strong>
         <small>${escapeHtml(unit)}</small>
       </div>
     </div>
-    <p class="backtest-verdict">
-      ${escapeHtml(conclusion)}
-      Chênh lệch ${formatSigned(comparisonValue)}, p xấp xỉ ${formatPValue(backtest.comparison.approximate_p_value)}
-      trên ${numberFormatter.format(backtest.samples)} kỳ kiểm tra.
-    </p>`;
+    <p class="backtest-verdict">${escapeHtml(conclusion)}</p>
+    <details class="technical-details">
+      <summary>Xem chi tiết học thuật</summary>
+      <p>
+        Chênh lệch ${formatSigned(comparisonValue)}, p xấp xỉ
+        ${formatPValue(backtest.comparison.approximate_p_value)} trên
+        ${numberFormatter.format(backtest.samples)} kỳ kiểm tra.
+      </p>
+    </details>`;
 }
 
 function renderPrizeReport(prizes) {
@@ -710,11 +781,12 @@ function renderPredictionCards(slug) {
   text(
     "prediction-ledger-status",
     latest
-      ? `Khóa sau kỳ #${latest.dataset_cutoff_draw_id} ngày ${formatDate(latest.dataset_cutoff_date)}`
+      ? `Dùng dữ liệu đến kỳ #${latest.dataset_cutoff_draw_id} ngày ${formatDate(latest.dataset_cutoff_date)}`
       : "Chưa có dự đoán",
   );
   document.getElementById("prediction-cards").innerHTML = predictions
     .map((prediction) => {
+      const copy = predictionStrategyCopy(prediction.strategy);
       const values = prediction.prediction.numbers;
       const output = values
         ? `
@@ -725,12 +797,13 @@ function renderPredictionCards(slug) {
         : `<div class="prediction-sequence">${escapeHtml(prediction.prediction.sequence)}</div>`;
       return `
         <article class="prediction-card${prediction.strategy === "balanced_signal" ? " primary" : ""}">
-          <span class="strategy-name">${escapeHtml(prediction.strategy_label)}</span>
+          <span class="strategy-name">${escapeHtml(copy.title)}</span>
+          <p class="strategy-description">${escapeHtml(copy.description)}</p>
           ${output}
           <div class="prediction-meta">
-            <span>Mã ${escapeHtml(prediction.prediction_id)}</span>
+            <span>Mã lưu vết ${escapeHtml(prediction.prediction_id)}</span>
             <span>Dữ liệu đến kỳ #${escapeHtml(prediction.dataset_cutoff_draw_id)}</span>
-            <span>Phiên bản ${escapeHtml(prediction.model_version)}</span>
+            <span>Cách tính phiên bản ${escapeHtml(prediction.model_version)}</span>
           </div>
         </article>`;
     })
@@ -740,6 +813,27 @@ function renderPredictionCards(slug) {
       '<div class="error-card">Chưa có dự đoán cho sản phẩm này.</div>';
   }
   if (product) document.getElementById("prediction-product").value = product.slug;
+}
+
+function predictionStrategyCopy(strategy) {
+  const copy = {
+    uniform_seeded: {
+      title: "Chọn ngẫu nhiên có thể lặp lại",
+      description: "Mốc so sánh công bằng. Mã lưu vết giúp tạo lại đúng bộ số này.",
+    },
+    recent_frequency: {
+      title: "Ưu tiên số nổi bật gần đây",
+      description: "Chọn các số lệch nhiều trong nhóm kỳ quay gần nhất.",
+    },
+    balanced_signal: {
+      title: "Kết hợp ba dấu hiệu lịch sử",
+      description: "Gộp tần suất gần đây, toàn lịch sử và số kỳ vắng mặt.",
+    },
+  };
+  return copy[strategy] || {
+    title: strategy.replaceAll("_", " "),
+    description: "Một phương pháp thử nghiệm được lưu để đối chiếu sau.",
+  };
 }
 
 function table(headers, rows) {
@@ -833,9 +927,20 @@ function escapeHtml(value) {
 }
 
 function showDashboardError(error) {
-  document.getElementById("dashboard-loading").innerHTML =
+  const loading = document.getElementById("dashboard-loading");
+  loading.hidden = false;
+  document.getElementById("dashboard").hidden = true;
+  loading.innerHTML =
     `<div class="error-card">${escapeHtml(error.message)}</div>`;
   console.error(error);
+}
+
+function showDashboardLoading(message) {
+  const loading = document.getElementById("dashboard-loading");
+  loading.innerHTML = `
+    <span class="loader" aria-hidden="true"></span>
+    <span id="dashboard-loading-label">${escapeHtml(message)}</span>`;
+  loading.hidden = false;
 }
 
 function showFatalError(error) {

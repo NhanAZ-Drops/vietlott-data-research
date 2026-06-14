@@ -7,13 +7,14 @@
   <meta name="theme-color" content="#102a2b">
   <title>Phương pháp nghiên cứu | Vietlott Data Research</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/styles.css?v=20260614-2">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="assets/styles.css?v=20260614-3">
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
   <header class="site-header">
     <a class="brand" href="index.html">
-      <span class="brand-mark">VDR</span>
+      <span class="brand-mark" aria-hidden="true"><i class="fi fi-rr-crystal-ball"></i></span>
       <span class="brand-copy">Vietlott<br>Data Research</span>
     </a>
     <nav class="site-nav document-nav" aria-label="Điều hướng chính">
@@ -70,6 +71,12 @@
           <p class="callout">
             Một hệ vật lý có thể tất định ở cấp vi mô nhưng vẫn không dự đoán được
             trong thực tế. "Không ngẫu nhiên tuyệt đối" không đồng nghĩa "có lợi thế dự báo".
+          </p>
+          <p class="callout evidence">
+            <strong>Kết luận hiện tại của dự án</strong>
+            Các bài thử trên dữ liệu quá khứ chưa cho thấy chiến lược đang công bố
+            vượt cách chọn ngẫu nhiên một cách đáng tin cậy. Vì vậy dự án hiện không
+            có bằng chứng để khuyên ưu tiên bất kỳ bộ số nào.
           </p>
         </section>
 
@@ -167,22 +174,27 @@
 
         <section id="du-doan">
           <p class="article-index">06</p>
-          <h2>Dự đoán, baseline và chống rò rỉ dữ liệu</h2>
+          <h2>Dự đoán, mốc so sánh và chống nhìn trước đáp án</h2>
           <p>
-            Website công bố ba chiến lược cho mỗi sản phẩm đang hoạt động.
+            Website công bố ba cách chọn cho mỗi sản phẩm đang hoạt động. Tên phổ
+            thông được đặt trước, tên kỹ thuật được giữ trong ngoặc để người đọc
+            có thể tra cứu và tái lập.
           </p>
           <div class="strategy-list">
             <article>
-              <strong>Baseline đồng đều có seed</strong>
-              <p>Chọn đồng đều bằng seed xác định từ sản phẩm, kỳ dữ liệu cuối và phiên bản mô hình.</p>
+              <strong>Chọn ngẫu nhiên có thể lặp lại</strong>
+              <span>uniform seeded baseline</span>
+              <p>Đây là mốc so sánh công bằng. Một mã số giúp lần sau tạo lại đúng bộ số đã chọn.</p>
             </article>
             <article>
-              <strong>Tần suất cửa sổ gần</strong>
-              <p>Xếp hạng độ lệch chuẩn hóa trong cửa sổ 200 kỳ, hoặc 1.000 kỳ với Keno.</p>
+              <strong>Ưu tiên số nổi bật gần đây</strong>
+              <span>recent frequency</span>
+              <p>Xếp hạng các số xuất hiện lệch nhiều trong 200 kỳ gần nhất, hoặc 1.000 kỳ với Keno.</p>
             </article>
             <article>
-              <strong>Tín hiệu cân bằng</strong>
-              <p>Kết hợp tần suất gần, độ lệch toàn lịch sử và độ vắng với trọng số cố định.</p>
+              <strong>Kết hợp ba dấu hiệu lịch sử</strong>
+              <span>balanced signal</span>
+              <p>Gộp tần suất gần đây, toàn bộ lịch sử và số kỳ vắng mặt theo trọng số cố định.</p>
             </article>
           </div>
           <div class="formula-card">
@@ -195,11 +207,12 @@
             <code>prediction</code> ghi dự báo trước. Khi có kỳ mới, chương trình thêm
             một sự kiện <code>evaluation</code> tham chiếu dự báo cũ, thay vì sửa dòng cũ.
           </p>
-          <h3>Backtest cuốn chiếu</h3>
+          <h3>Thử lại theo dòng thời gian</h3>
           <p>
-            Tại kỳ kiểm tra <em>t</em>, mô hình chỉ được dùng dữ liệu trước <em>t</em>.
-            Mỗi dự báo được so với baseline đồng đều dùng seed độc lập. Chênh lệch số
-            trùng được đánh giá bằng phép kiểm tra ghép cặp xấp xỉ chuẩn.
+            Cách này còn gọi là walk-forward backtest. Tại kỳ kiểm tra <em>t</em>,
+            phương pháp chỉ được dùng dữ liệu trước <em>t</em>. Mỗi dự báo được so
+            với cách chọn ngẫu nhiên độc lập. Chênh lệch số trùng được kiểm tra xem
+            có đủ lớn để khó giải thích bằng may rủi hay không.
           </p>
           <p class="callout">
             Backtest tốt vẫn có thể là overfitting. Bằng chứng mạnh hơn phải đến từ
@@ -238,7 +251,11 @@
 
   <footer class="site-footer">
     <div class="shell footer-grid">
-      <div><span class="brand-mark">VDR</span><p>Phương pháp được viết để có thể phản biện và tái lập.</p></div>
+      <div>
+        <span class="brand-mark" aria-hidden="true"><i class="fi fi-rr-crystal-ball"></i></span>
+        <p>Phương pháp được viết để có thể phản biện và tái lập.</p>
+        <a class="icon-credit" href="https://www.flaticon.com/free-icon-font/crystal-ball_8034121">Biểu tượng từ UIcons by Flaticon</a>
+      </div>
       <div><strong>Đi tiếp</strong><a href="index.html">Báo cáo tương tác</a><a href="du-lieu.html">Dữ liệu</a></div>
       <div><strong>Lưu ý</strong><p>Không phải hệ thống bảo đảm trúng thưởng hoặc tư vấn tài chính.</p></div>
     </div>

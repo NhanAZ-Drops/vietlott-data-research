@@ -92,6 +92,20 @@ chứng rằng trong giới hạn dữ liệu và công suất kiểm định, m
 bác bỏ. Kết quả âm vẫn hữu ích vì nó định lượng mức sai lệch tối đa mà dữ liệu có
 thể phát hiện.
 
+## Kết luận hiện tại
+
+Các backtest đang công bố chưa cho thấy chiến lược nào vượt cách chọn ngẫu nhiên
+một cách đáng tin cậy. Do đó dự án hiện không có bằng chứng để ưu tiên một bộ số
+hoặc khuyên dùng một chiến lược chọn số.
+
+Kết luận này không phủ nhận khả năng một hệ vật lý có sai lệch rất nhỏ. Nó chỉ nói
+rằng sai lệch, nếu có, chưa tạo thành lợi thế dự báo ổn định trong dữ liệu hiện có.
+Dataset cũng chưa có mã máy, mã bộ bi, bảo trì và điều kiện môi trường để quy một
+sai lệch quan sát được cho nguyên nhân cơ học.
+
+Đây là quan điểm hiện tại dựa trên phương pháp đã công bố. Nó phải được sửa nếu
+chuỗi dự đoán lưu trước và dữ liệu tương lai cung cấp bằng chứng tốt hơn.
+
 ## Giới hạn sử dụng
 
 Phân tích hồi cứu dễ tạo mẫu giả nếu thử đủ nhiều đặc trưng. Dự báo xổ số có không

@@ -7,14 +7,15 @@
   <meta name="theme-color" content="#102a2b">
   <title>Dữ liệu và tái lập | Vietlott Data Research</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/styles.css?v=20260614-2">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="assets/styles.css?v=20260614-3">
   <script src="assets/docs.js?v=20260614-1" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
   <header class="site-header">
     <a class="brand" href="index.html">
-      <span class="brand-mark">VDR</span>
+      <span class="brand-mark" aria-hidden="true"><i class="fi fi-rr-crystal-ball"></i></span>
       <span class="brand-copy">Vietlott<br>Data Research</span>
     </a>
     <nav class="site-nav document-nav" aria-label="Điều hướng chính">
@@ -169,7 +170,11 @@ sample = draws.loc[draws["draw_status"] == "confirmed"].copy()</code></pre>
 
   <footer class="site-footer">
     <div class="shell footer-grid">
-      <div><span class="brand-mark">VDR</span><p>Dữ liệu có nguồn, có trạng thái và có thể tạo lại.</p></div>
+      <div>
+        <span class="brand-mark" aria-hidden="true"><i class="fi fi-rr-crystal-ball"></i></span>
+        <p>Dữ liệu có nguồn, có trạng thái và có thể tạo lại.</p>
+        <a class="icon-credit" href="https://www.flaticon.com/free-icon-font/crystal-ball_8034121">Biểu tượng từ UIcons by Flaticon</a>
+      </div>
       <div><strong>Đi tiếp</strong><a href="index.html">Báo cáo tương tác</a><a href="phuong-phap.html">Phương pháp</a></div>
       <div><strong>Giấy phép</strong><p>Mã nguồn MIT. Dữ liệu gốc vẫn chịu quyền và điều kiện của nguồn.</p></div>
     </div>
