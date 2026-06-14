@@ -3,10 +3,8 @@ name: Cập nhật các kỳ quay theo lịch
 on:
   workflow_dispatch:
   schedule:
-    - cron: "7,27,47 13,18,21 * * *"
-      timezone: "Asia/Ho_Chi_Minh"
-    - cron: "17 22 * * *"
-      timezone: "Asia/Ho_Chi_Minh"
+    - cron: "7,27,47 6,11,14 * * *"
+    - cron: "17 15 * * *"
 
 permissions:
   contents: write

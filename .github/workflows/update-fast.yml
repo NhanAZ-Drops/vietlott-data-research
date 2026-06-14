@@ -3,10 +3,8 @@ name: Cập nhật Keno và Bingo18
 on:
   workflow_dispatch:
   schedule:
-    - cron: "5,15,25,35,45,55 6-21 * * *"
-      timezone: "Asia/Ho_Chi_Minh"
-    - cron: "5,25,45 22 * * *"
-      timezone: "Asia/Ho_Chi_Minh"
+    - cron: "5,15,25,35,45,55 0-14,23 * * *"
+    - cron: "5,25,45 15 * * *"
 
 permissions:
   contents: write

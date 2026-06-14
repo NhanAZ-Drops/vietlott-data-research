@@ -28,7 +28,7 @@ Nguồn lịch
 ## Workflow
 
 `update-fast.yml` chạy mỗi 10 phút từ 06:05 đến 21:55 và thêm ba lượt dự phòng
-trong giờ 22 theo múi giờ `Asia/Ho_Chi_Minh`.
+trong giờ 22 theo giờ Việt Nam. Cron trong YAML được quy đổi sang UTC.
 
 `update-scheduled.yml` chạy nhiều lượt sau các mốc 13:00, 18:00, 21:00 và thêm
 một lượt 22:17. Mỗi lượt kiểm tra toàn bộ sản phẩm đang hoạt động trong nhóm quay
