@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260614-9">
+  <link rel="stylesheet" href="assets/styles.css?v=20260614-10">
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -210,6 +210,13 @@
             File <code>predictions/ledger.jsonl</code> là sổ append-only. Sự kiện
             <code>prediction</code> ghi dự báo trước. Khi có kỳ mới, chương trình thêm
             một sự kiện <code>evaluation</code> tham chiếu dự báo cũ, thay vì sửa dòng cũ.
+          </p>
+          <h3>Quy tắc chấm đúng, gần đúng và sai</h3>
+          <p>
+            Đúng toàn bộ nghĩa là mọi số chính, số đặc biệt hoặc mọi vị trí chữ số
+            đều khớp. Gần đúng chỉ khi thiếu đúng một thành phần so với dự đoán đầy
+            đủ. Các trường hợp còn lại tính là sai, nhưng báo cáo vẫn lưu chính xác
+            số lượng số hoặc vị trí đã trùng để không làm mất thông tin.
           </p>
           <h3>Thử lại theo dòng thời gian</h3>
           <p>

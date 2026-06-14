@@ -13,8 +13,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260614-9">
-  <script src="assets/app.js?v=20260614-9" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260614-10">
+  <script src="assets/app.js?v=20260614-10" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -498,18 +498,42 @@
           <span id="prediction-ledger-status">...</span>
         </div>
         <div id="prediction-cards" class="prediction-grid"></div>
+        <section class="prediction-results" aria-labelledby="prediction-results-title">
+          <div class="prediction-results-heading">
+            <div>
+              <p class="panel-kicker">Kết quả ngoài mẫu đã khóa trước</p>
+              <h3 id="prediction-results-title">Dự đoán gốc so với kết quả thật</h3>
+            </div>
+            <p id="prediction-near-rule">
+              Gần đúng chỉ khi thiếu đúng một số hoặc một vị trí so với kết quả đầy đủ.
+            </p>
+          </div>
+          <div id="prediction-product-summary" class="prediction-product-summary"></div>
+          <div id="prediction-latest-comparison" class="prediction-comparison-grid"></div>
+          <details class="prediction-history-panel">
+            <summary>
+              <span>Mở toàn bộ lịch sử đối chiếu của sản phẩm</span>
+              <strong id="prediction-history-count">...</strong>
+            </summary>
+            <div id="prediction-history-list" class="prediction-history-list"></div>
+          </details>
+        </section>
         <div class="archive-summary">
           <div>
-            <span>Dự đoán đang chờ</span>
+            <span>Đúng toàn bộ</span>
+            <strong id="exact-predictions">...</strong>
+          </div>
+          <div>
+            <span>Gần đúng</span>
+            <strong id="near-predictions">...</strong>
+          </div>
+          <div>
+            <span>Sai</span>
+            <strong id="wrong-predictions">...</strong>
+          </div>
+          <div>
+            <span>Đang chờ kết quả</span>
             <strong id="pending-predictions">...</strong>
-          </div>
-          <div>
-            <span>Lượt đã đối chiếu</span>
-            <strong id="evaluated-predictions">...</strong>
-          </div>
-          <div>
-            <span>Sản phẩm có dự đoán</span>
-            <strong id="prediction-product-count">...</strong>
           </div>
           <a href="phuong-phap.html#du-doan">Xem thuật toán và quy tắc chống rò rỉ dữ liệu</a>
         </div>

@@ -103,6 +103,14 @@ class PredictionLedger:
         evaluations = [
             event for event in self.events if event.get("event_type") == "evaluation"
         ]
+        predictions_by_id = {
+            prediction["prediction_id"]: prediction for prediction in predictions
+        }
+        evaluation_details = [
+            _evaluation_detail(predictions_by_id[evaluation["prediction_id"]], evaluation)
+            for evaluation in evaluations
+            if evaluation["prediction_id"] in predictions_by_id
+        ]
         evaluated_ids = {event["prediction_id"] for event in evaluations}
         latest_by_product: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
         for prediction in predictions:
@@ -113,12 +121,16 @@ class PredictionLedger:
                 latest_by_product[product][strategy] = prediction
 
         performance: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
-        for evaluation in evaluations:
+        product_performance: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for evaluation in evaluation_details:
             performance[(evaluation["product"], evaluation["strategy"])].append(evaluation)
+            product_performance[evaluation["product"]].append(evaluation)
 
         performance_rows = []
         for (product, strategy), rows in sorted(performance.items()):
-            exact_hits = sum(bool(row["metrics"].get("exact_hit")) for row in rows)
+            exact_hits = sum(row["outcome"]["status"] == "exact" for row in rows)
+            near_hits = sum(row["outcome"]["status"] == "near" for row in rows)
+            partial_matches = sum(bool(row["outcome"]["has_partial_match"]) for row in rows)
             hit_counts = [
                 int(row["metrics"]["hit_count"])
                 for row in rows
@@ -136,18 +148,71 @@ class PredictionLedger:
                     "evaluations": len(rows),
                     "exact_hits": exact_hits,
                     "exact_hit_rate": _round(exact_hits / len(rows)),
+                    "near_hits": near_hits,
+                    "wrong": len(rows) - exact_hits - near_hits,
+                    "partial_matches": partial_matches,
                     "average_hits": _round(fmean(hit_counts)) if hit_counts else None,
                     "average_best_position_matches": (
                         _round(fmean(best_position)) if best_position else None
                     ),
+                    "score_distribution": _score_distribution(rows),
                 }
             )
+
+        product_outcomes = {}
+        for product, rows in sorted(product_performance.items()):
+            product_exact = sum(row["outcome"]["status"] == "exact" for row in rows)
+            product_near = sum(row["outcome"]["status"] == "near" for row in rows)
+            product_partial = sum(
+                bool(row["outcome"]["has_partial_match"]) for row in rows
+            )
+            product_zero = sum(
+                int(row["outcome"]["matched_units"]) == 0 for row in rows
+            )
+            product_draws = {
+                (row["actual_draw_date"], row["actual_draw_id"]) for row in rows
+            }
+            product_outcomes[product] = {
+                "evaluated_draws": len(product_draws),
+                "evaluated_predictions": len(rows),
+                "exact": product_exact,
+                "near": product_near,
+                "wrong": len(rows) - product_exact - product_near,
+                "partial_matches": product_partial,
+                "zero_matches": product_zero,
+                "score_kind": rows[0]["outcome"]["score_kind"],
+                "score_distribution": _score_distribution(rows),
+            }
 
         pending = [
             prediction for prediction in predictions if prediction["prediction_id"] not in evaluated_ids
         ]
+        exact_hits = sum(
+            evaluation["outcome"]["status"] == "exact"
+            for evaluation in evaluation_details
+        )
+        near_hits = sum(
+            evaluation["outcome"]["status"] == "near"
+            for evaluation in evaluation_details
+        )
+        partial_matches = sum(
+            bool(evaluation["outcome"]["has_partial_match"])
+            for evaluation in evaluation_details
+        )
+        zero_matches = sum(
+            int(evaluation["outcome"]["matched_units"]) == 0
+            for evaluation in evaluation_details
+        )
+        evaluated_draws = {
+            (
+                evaluation["product"],
+                evaluation["actual_draw_date"],
+                evaluation["actual_draw_id"],
+            )
+            for evaluation in evaluation_details
+        }
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "model_version": MODEL_VERSION,
             "principle": (
                 "Mọi dự đoán được ghi trước kết quả, giữ nguyên tham số và luôn so với "
@@ -158,9 +223,28 @@ class PredictionLedger:
                 for product, strategies in sorted(latest_by_product.items())
             },
             "pending_count": len(pending),
-            "evaluation_count": len(evaluations),
+            "evaluation_count": len(evaluation_details),
+            "outcome_summary": {
+                "evaluated_draws": len(evaluated_draws),
+                "evaluated_predictions": len(evaluation_details),
+                "exact": exact_hits,
+                "near": near_hits,
+                "wrong": len(evaluation_details) - exact_hits - near_hits,
+                "partial_matches": partial_matches,
+                "zero_matches": zero_matches,
+                "near_rule": (
+                    "Gần đúng chỉ khi thiếu đúng một số hoặc một vị trí so với kết quả "
+                    "đầy đủ. Trùng ít hơn vẫn được ghi số lượng nhưng tính là sai."
+                ),
+            },
+            "product_outcomes": product_outcomes,
             "performance": performance_rows,
-            "recent_evaluations": evaluations[-100:][::-1],
+            "history_limit_per_product": 100,
+            "recent_evaluations": [
+                row
+                for product in sorted(product_performance)
+                for row in product_performance[product][-100:][::-1]
+            ],
         }
 
 
@@ -632,10 +716,18 @@ def _evaluation_event(
         numbers = set(int(value) for value in predicted.get("numbers", []))
         actual_numbers = set(actual.values)
         predicted_special = set(int(value) for value in predicted.get("special_numbers", []))
+        actual_special = set(actual.special_values)
+        special_exact = (
+            predicted_special == actual_special
+            if product.special_count
+            else True
+        )
         metrics = {
             "hit_count": len(numbers.intersection(actual_numbers)),
-            "exact_hit": numbers == actual_numbers,
-            "special_hit_count": len(predicted_special.intersection(actual.special_values)),
+            "main_exact_hit": numbers == actual_numbers,
+            "special_exact_hit": special_exact,
+            "exact_hit": numbers == actual_numbers and special_exact,
+            "special_hit_count": len(predicted_special.intersection(actual_special)),
         }
         actual_result: dict[str, object] = {
             "numbers": list(actual.values),
@@ -691,6 +783,110 @@ def _prediction_order(prediction: dict[str, Any]) -> tuple[str, int | str]:
     return prediction["dataset_cutoff_date"], int(draw_id) if draw_id.isdigit() else draw_id
 
 
+def _evaluation_detail(
+    prediction: dict[str, Any],
+    evaluation: dict[str, Any],
+) -> dict[str, Any]:
+    metrics = evaluation["metrics"]
+    predicted_result = prediction["prediction"]
+    actual_result = evaluation["actual_result"]
+    if "hit_count" in metrics:
+        predicted_numbers = {
+            int(value) for value in predicted_result.get("numbers", [])
+        }
+        actual_numbers = {
+            int(value) for value in actual_result.get("numbers", [])
+        }
+        predicted_special = {
+            int(value) for value in predicted_result.get("special_numbers", [])
+        }
+        actual_special = {
+            int(value) for value in actual_result.get("special_numbers", [])
+        }
+        matched_numbers = sorted(predicted_numbers.intersection(actual_numbers))
+        matched_special = sorted(predicted_special.intersection(actual_special))
+        required_units = len(predicted_numbers) + len(predicted_special)
+        matched_units = len(matched_numbers) + len(matched_special)
+        exact = (
+            predicted_numbers == actual_numbers
+            and predicted_special == actual_special
+        )
+        near = not exact and required_units > 0 and matched_units == required_units - 1
+        score_kind = "numbers"
+        score = len(matched_numbers)
+        score_total = len(predicted_numbers)
+        score_label = f"{score}/{score_total} số chính"
+        if predicted_special:
+            score_label += (
+                f", {len(matched_special)}/{len(predicted_special)} số đặc biệt"
+            )
+        comparison = {
+            "matched_numbers": matched_numbers,
+            "missed_numbers": sorted(predicted_numbers - actual_numbers),
+            "actual_only_numbers": sorted(actual_numbers - predicted_numbers),
+            "matched_special_numbers": matched_special,
+        }
+    else:
+        sequence = str(predicted_result.get("sequence", ""))
+        outcomes = {str(value) for value in actual_result.get("outcomes", [])}
+        best_outcome = _best_matching_outcome(sequence, outcomes)
+        matched_positions = [
+            index
+            for index, (left, right) in enumerate(
+                zip(sequence, best_outcome, strict=False)
+            )
+            if left == right
+        ]
+        required_units = len(sequence)
+        matched_units = len(matched_positions)
+        exact = sequence in outcomes
+        near = not exact and required_units > 0 and matched_units == required_units - 1
+        score_kind = "positions"
+        score = matched_units
+        score_total = required_units
+        score_label = f"{score}/{score_total} vị trí"
+        comparison = {
+            "best_matching_outcome": best_outcome,
+            "matched_positions": matched_positions,
+        }
+
+    status = "exact" if exact else "near" if near else "wrong"
+    return {
+        **evaluation,
+        "strategy_label": prediction.get("strategy_label", prediction["strategy"]),
+        "prediction_generated_at": prediction["generated_at"],
+        "dataset_cutoff_draw_id": prediction["dataset_cutoff_draw_id"],
+        "dataset_cutoff_date": prediction["dataset_cutoff_date"],
+        "dataset_fingerprint": prediction["dataset_fingerprint"],
+        "prediction": predicted_result,
+        "outcome": {
+            "status": status,
+            "status_label": {
+                "exact": "Đúng toàn bộ",
+                "near": "Gần đúng",
+                "wrong": "Sai",
+            }[status],
+            "score_kind": score_kind,
+            "score": score,
+            "score_total": score_total,
+            "score_label": score_label,
+            "matched_units": matched_units,
+            "required_units": required_units,
+            "has_partial_match": not exact and matched_units > 0,
+            **comparison,
+        },
+    }
+
+
+def _score_distribution(rows: list[dict[str, Any]]) -> list[dict[str, int]]:
+    counts = Counter(int(row["outcome"]["score"]) for row in rows)
+    return [
+        {"score": score, "count": counts[score]}
+        for score in range(max(counts, default=0) + 1)
+        if counts[score]
+    ]
+
+
 def _best_position_match(prediction: str, outcomes: set[str]) -> int:
     if not outcomes:
         return 0
@@ -700,6 +896,21 @@ def _best_position_match(prediction: str, outcomes: set[str]) -> int:
             for left, right in zip(prediction, outcome, strict=False)
         )
         for outcome in outcomes
+    )
+
+
+def _best_matching_outcome(prediction: str, outcomes: set[str]) -> str:
+    if not outcomes:
+        return ""
+    return max(
+        sorted(outcomes),
+        key=lambda outcome: (
+            sum(
+                left == right
+                for left, right in zip(prediction, outcome, strict=False)
+            ),
+            outcome,
+        ),
     )
 
 

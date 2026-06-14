@@ -17,10 +17,10 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260614-9" in index
+    assert "assets/app.js?v=20260614-10" in index
     assert "assets/docs.js?v=20260614-2" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260614-9" in page
+        assert "assets/styles.css?v=20260614-10" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -39,7 +39,10 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "renderFairnessAudit" in app_script
     assert "renderAuditVisualLog" in app_script
     assert 'text("ribbon-product-count"' in app_script
-    assert 'text("prediction-product-count"' in app_script
+    assert 'text("exact-predictions"' in app_script
+    assert "renderPredictionResults" in app_script
+    assert "prediction-history-list" in index
+    assert "Dự đoán gốc so với kết quả thật" in index
     assert "backtest-evidence" in app_script
     assert "audit-log-visual" in index
     assert "audit-log.jsonl" in index
