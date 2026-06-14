@@ -47,6 +47,7 @@ Lịch workflow chỉ là lịch thăm dò. Chương trình không tạo bản g
 - Nếu kỳ bị hủy, không có bản ghi giả
 - Nếu sản phẩm dừng lâu dài, workflow không tạo thay đổi dữ liệu
 - Nếu mạng lỗi, HTTP client retry và tôn trọng `Retry-After`
+- Nếu trang HTML bị Cloudflare chặn, chương trình dùng endpoint AjaxPro chính thức
 - Nếu GitHub trì hoãn một lượt cron, lượt sau vẫn bắt kịp
 - Nếu nguồn sửa kỳ gần đây, bước reconciliation cập nhật bản ghi
 - Nếu HTML thay đổi bất thường, parser dừng thay vì đoán
@@ -70,6 +71,9 @@ dữ liệu ngừng cập nhật bất thường.
 
 Hai workflow dùng cùng một concurrency group nên không ghi đè nhau. Quyền
 `GITHUB_TOKEN` chỉ cấp `contents: write`.
+
+Nếu nguồn lỗi nhưng một sản phẩm khác đã cập nhật hợp lệ, workflow vẫn kiểm tra và
+lưu phần hợp lệ trước khi báo đỏ. Cách này vừa không mất dữ liệu vừa không che lỗi.
 
 Commit do `GITHUB_TOKEN` tạo không kích hoạt workflow khác. Vì vậy mỗi workflow
 cập nhật tự kiểm tra dữ liệu trước khi push. Website tĩnh trong tương lai nên được

@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+import requests
+
 from ..config import AjaxKind, ProductSpec
 from ..http import HttpClient
 from ..models import DetailResult, DrawRecord
@@ -18,6 +20,7 @@ class AjaxContext:
     first_page_html: str
     dynamic_key: str | None = None
     total_rows: int = 0
+    ajax_only: bool = False
 
 
 class OfficialVietlottSource:
@@ -25,7 +28,22 @@ class OfficialVietlottSource:
         self.client = client
 
     def bootstrap(self, spec: ProductSpec) -> AjaxContext:
-        html = self.client.get_text(spec.list_url)
+        try:
+            html = self.client.get_text(spec.list_url)
+        except requests.RequestException as exc:
+            LOGGER.warning(
+                "%s list page is unavailable, using the official AjaxPro endpoint: %s",
+                spec.slug,
+                exc,
+            )
+            return self._ajax_only_context()
+        if _is_cloudflare_challenge(html):
+            LOGGER.warning(
+                "%s list page returned a Cloudflare challenge, using the official "
+                "AjaxPro endpoint",
+                spec.slug,
+            )
+            return self._ajax_only_context()
         key_match = re.search(
             r"ServerSideDrawResult\s*\(\s*RenderInfo\s*,\s*'([0-9a-fA-F]+)'",
             html,
@@ -37,13 +55,22 @@ class OfficialVietlottSource:
             total_rows=total_rows[-1] if total_rows else 0,
         )
 
+    @staticmethod
+    def _ajax_only_context() -> AjaxContext:
+        return AjaxContext(
+            first_page_html="",
+            dynamic_key="",
+            total_rows=10_000_000,
+            ajax_only=True,
+        )
+
     def fetch_page(
         self,
         spec: ProductSpec,
         page_index: int,
         context: AjaxContext,
     ) -> list[DrawRecord]:
-        if page_index == 0:
+        if page_index == 0 and not context.ajax_only:
             html = context.first_page_html
         else:
             payload = self._payload(spec, page_index, context)
@@ -56,6 +83,7 @@ class OfficialVietlottSource:
                     "Origin": "https://vietlott.vn",
                     "Referer": spec.list_url,
                     "X-AjaxPro-Method": "ServerSideDrawResult",
+                    "X-Requested-With": "XMLHttpRequest",
                 },
             )
             html = self._response_html(response)
@@ -106,11 +134,9 @@ class OfficialVietlottSource:
             "System": 1,
         }
         if spec.ajax_kind is AjaxKind.MATRIX:
-            if not context.dynamic_key:
-                raise RuntimeError(f"Could not discover the AjaxPro key for {spec.slug}")
             return {
                 "ORenderInfo": render_info,
-                "Key": context.dynamic_key,
+                "Key": context.dynamic_key or "",
                 "GameDrawId": "",
                 "ArrayNumbers": [
                     ["" for _ in range(spec.array_columns or 18)] for _ in range(spec.array_rows or 5)
@@ -163,3 +189,8 @@ class OfficialVietlottSource:
                 "TotalRow": context.total_rows,
             }
         raise ValueError(f"Unsupported Ajax kind: {spec.ajax_kind}")
+
+
+def _is_cloudflare_challenge(html: str) -> bool:
+    lowered = html.lower()
+    return "just a moment" in lowered or "cf-chl-" in lowered

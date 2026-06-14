@@ -45,8 +45,9 @@ def run_update(
         jitter_seconds=jitter,
         retry_total=retries,
         user_agent=(
-            "NhanAZ/vietlott-data-research "
-            f"(personal scientific data collection; contact: {contact})"
+            "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) "
+            "Gecko/20100101 Firefox/128.0 "
+            f"NhanAZ-vietlott-data-research/0.2 contact/{contact}"
         ),
     )
     try:

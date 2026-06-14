@@ -19,12 +19,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Lấy mã nguồn
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Cài Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -36,6 +36,8 @@ jobs:
         run: vietlott-repository-data hydrate --source-dir datasets --destination-dir data
 
       - name: Đọc kỳ mới từ nguồn chính thức
+        id: update
+        continue-on-error: true
         run: >
           vietlott-auto-update
           --products mega645 power655 lotto535 max3d max3dpro
@@ -44,6 +46,7 @@ jobs:
           --request-delay 0.8
           --jitter 0.25
           --retries 5
+          --strict
 
       - name: Đóng gói và kiểm tra dataset
         run: |
@@ -63,3 +66,7 @@ jobs:
           git commit -m "data: cập nhật kết quả Vietlott"
           git pull --rebase origin main
           git push origin HEAD:main
+
+      - name: Báo lỗi nguồn sau khi bảo toàn dữ liệu hợp lệ
+        if: steps.update.outcome == 'failure'
+        run: exit 1

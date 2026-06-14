@@ -18,10 +18,11 @@ có thể tái lập và đủ thuận tiện cho phân tích bằng Python, R h
 - Keno
 - Bingo18
 
-Dataset hiện có 379.306 bản ghi kỳ quay. Keno có dữ liệu từ mã `0000001` và
-75 mã kỳ đã được nhiều nguồn đối chiếu là không phát hành. Các kỳ bị thông báo
-không xác nhận được giữ lại với `draw_status=not_confirmed` để bảo toàn dấu vết,
-nhưng phải loại khỏi mẫu phân tích mặc định.
+Bản snapshot kiểm toán ban đầu có 379.306 bản ghi kỳ quay và tiếp tục tăng qua
+workflow. Keno có dữ liệu từ mã `0000001` và 75 mã kỳ đã được nhiều nguồn đối
+chiếu là không phát hành. Các kỳ bị thông báo không xác nhận được giữ lại với
+`draw_status=not_confirmed` để bảo toàn dấu vết, nhưng phải loại khỏi mẫu phân
+tích mặc định.
 
 ## Dùng dataset
 
