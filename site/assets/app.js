@@ -106,6 +106,7 @@ async function renderProjectVerdict(products) {
 
   if (!reports.length) {
     text("verdict-backtest-count", "Chưa đủ dữ liệu");
+    text("backtest-overview-summary", "Chưa đọc được báo cáo");
     text(
       "project-verdict-summary",
       "Chưa đọc được báo cáo để đưa ra kết luận tổng hợp.",
@@ -115,13 +116,70 @@ async function renderProjectVerdict(products) {
 
   text("verdict-backtest-count", `${wins}/${reports.length}`);
   const conclusion = wins === 0
-    ? `Không phương pháp nào trong ${reports.length} backtest hiện tại vượt cách chọn ngẫu nhiên một cách đáng tin cậy.`
-    : `${wins} trong ${reports.length} phương pháp vượt mốc ngẫu nhiên theo tiêu chí hiện tại, nhưng vẫn cần xác nhận bằng dự đoán đã lưu trước.`;
+    ? `Không sản phẩm nào trong ${reports.length} báo cáo có chiến lược vượt cách chọn ngẫu nhiên theo tiêu chí hiện tại.`
+    : `${wins} trong ${reports.length} sản phẩm có ít nhất một chiến lược vượt mốc ngẫu nhiên trong backtest, nhưng vẫn cần xác nhận bằng dự đoán đã lưu trước.`;
   text("project-verdict-summary", conclusion);
+  renderBacktestOverview(reports);
   text(
     "prediction-current-conclusion",
     `${conclusion} ${predictionOutcomeConclusion()} Các bộ số dưới đây là thí nghiệm, không phải gợi ý mua vé.`,
   );
+}
+
+function renderBacktestOverview(reports) {
+  const container = document.getElementById("backtest-overview-list");
+  if (!container) return;
+  const rows = reports.map((report) => {
+    const backtest = report.backtest;
+    const kind = report.product.kind;
+    const comparisons = [
+      { label: "Kết hợp ba dấu hiệu", comparison: backtest.comparison },
+      backtest.audit_comparison
+        ? {
+            label: "Khai thác kiểm định công bằng",
+            comparison: backtest.audit_comparison,
+          }
+        : null,
+    ].filter(Boolean);
+    const winners = comparisons.filter((item) => item.comparison?.beats_baseline);
+    const status = winners.length ? "Vượt tiêu chí backtest" : "Chưa vượt baseline";
+    const evidence = comparisons.map((item) => {
+      const difference = kind === "number_set"
+        ? item.comparison.mean_hit_difference
+        : item.comparison.mean_position_match_difference;
+      return `
+        <li class="${item.comparison.beats_baseline ? "is-winner" : ""}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${formatSigned(difference)}</strong>
+          <small>p ${formatPValue(item.comparison.approximate_p_value)}</small>
+        </li>`;
+    }).join("");
+    return `
+      <article class="backtest-overview-row ${winners.length ? "has-winner" : ""}">
+        <div>
+          <span>${escapeHtml(report.product.name)}</span>
+          <strong>${escapeHtml(status)}</strong>
+          <small>${numberFormatter.format(backtest.samples)} kỳ kiểm tra</small>
+        </div>
+        <ul>${evidence}</ul>
+      </article>`;
+  });
+  const winningStrategies = reports.reduce((count, report) => (
+    count
+    + Number(Boolean(report.backtest.comparison?.beats_baseline))
+    + Number(Boolean(report.backtest.audit_comparison?.beats_baseline))
+  ), 0);
+  text(
+    "backtest-overview-summary",
+    `${winningStrategies} chiến lược vượt tiêu chí trên ${reports.length} sản phẩm`,
+  );
+  container.innerHTML = `
+    <p class="backtest-overview-note">
+      Chênh lệch dương nghĩa là điểm trung bình cao hơn baseline chọn ngẫu nhiên.
+      Tiêu chí hiện tại yêu cầu chênh lệch dương và p nhỏ hơn 0,05. Đây là backtest
+      trên quá khứ, chưa phải bằng chứng dự đoán kỳ tương lai.
+    </p>
+    ${rows.join("")}`;
 }
 
 function renderManifest(manifest) {

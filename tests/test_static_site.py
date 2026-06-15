@@ -17,12 +17,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260615-4" in index
+    assert "assets/app.js?v=20260615-5" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260614-2" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260615-5" in page
+        assert "assets/styles.css?v=20260615-6" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -59,6 +59,9 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "prediction-history-list" in index
     assert "Dự đoán gốc so với kết quả thật" in index
     assert "backtest-evidence" in app_script
+    assert "renderBacktestOverview" in app_script
+    assert "Xem chi tiết 8 báo cáo backtest" in index
+    assert "Sản phẩm có chiến lược vượt baseline" in index
     assert "audit-log-visual" in index
     assert "audit-log.jsonl" in index
     assert "audit-summary.json" in data_page

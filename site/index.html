@@ -13,8 +13,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;1,400;1,500&amp;display=swap">
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-  <link rel="stylesheet" href="assets/styles.css?v=20260615-5">
-  <script src="assets/app.js?v=20260615-4" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260615-6">
+  <script src="assets/app.js?v=20260615-5" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -109,11 +109,18 @@
         </p>
       </div>
       <div class="stance-verdict">
-        <span>Kết luận từ backtest hiện có</span>
-        <strong id="verdict-backtest-count">Đang đối chiếu...</strong>
-        <p id="project-verdict-summary">
-          Đang so từng phương pháp với cách chọn ngẫu nhiên trên dữ liệu quá khứ.
-        </p>
+          <span>Sản phẩm có chiến lược vượt baseline</span>
+          <strong id="verdict-backtest-count">Đang đối chiếu...</strong>
+          <p id="project-verdict-summary">
+            Đang so từng phương pháp với cách chọn ngẫu nhiên trên dữ liệu quá khứ.
+          </p>
+          <details class="backtest-overview-details">
+            <summary>
+              <span>Xem chi tiết 8 báo cáo backtest</span>
+              <small id="backtest-overview-summary">Đang tổng hợp từng sản phẩm</small>
+            </summary>
+            <div id="backtest-overview-list" class="backtest-overview-list"></div>
+          </details>
       </div>
       <div class="stance-grid">
         <article>
