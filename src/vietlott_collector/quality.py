@@ -18,6 +18,7 @@ from .validation import validate_draw
 
 QUALITY_REPORT_VERSION = "1.0.0"
 PARSER_VERSION = "0.2.0"
+MANIFEST_TEXT_SUFFIXES = {".csv", ".json", ".jsonl", ".md", ".py", ".yml", ".yaml", ".txt"}
 METHODOLOGY_VERSIONS = {
     "data_quality": QUALITY_REPORT_VERSION,
     "descriptive_statistics": "1.0.0",
@@ -161,9 +162,10 @@ def build_snapshot_manifest(root: Path = Path("datasets")) -> dict[str, object]:
         relative = path.relative_to(root).as_posix()
         if relative == "metadata/snapshot-manifest.json":
             continue
+        content = _manifest_bytes(path)
         entry: dict[str, object] = {
-            "bytes": path.stat().st_size,
-            "sha256": _sha256(path),
+            "bytes": len(content),
+            "sha256": _sha256_bytes(content),
         }
         if path.suffix.lower() == ".csv":
             entry["data_rows"] = _csv_data_rows(path)
@@ -393,11 +395,18 @@ def _csv_data_rows(path: Path) -> int:
 
 
 def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return _sha256_bytes(_manifest_bytes(path))
+
+
+def _sha256_bytes(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def _manifest_bytes(path: Path) -> bytes:
+    content = path.read_bytes()
+    if path.suffix.lower() in MANIFEST_TEXT_SUFFIXES:
+        return content.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return content
 
 
 def _repository_commit(root: Path) -> str | None:

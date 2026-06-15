@@ -17,6 +17,7 @@ from .storage import DRAW_COLUMNS, PRIZE_COLUMNS
 
 HIGH_FREQUENCY_PRODUCTS = {"keno", "bingo18"}
 MAX_GITHUB_FILE_BYTES = 100 * 1024 * 1024
+MANIFEST_TEXT_SUFFIXES = {".csv", ".json", ".jsonl", ".md", ".py", ".yml", ".yaml", ".txt"}
 
 
 def publish_repository_data(
@@ -113,11 +114,12 @@ def validate_repository_data(root: Path = Path("datasets")) -> dict[str, object]
     for path in [*draw_paths, *prize_paths, root / "exclusions.csv", root / "prize_rules.csv"]:
         if not path.exists():
             continue
-        size = path.stat().st_size
+        content = _manifest_bytes(path)
+        size = len(content)
         relative = path.relative_to(root).as_posix()
         files[relative] = {
             "bytes": size,
-            "sha256": _sha256(path),
+            "sha256": _sha256_bytes(content),
         }
         if size >= MAX_GITHUB_FILE_BYTES:
             errors.append(f"{relative} is too large for normal Git storage")
@@ -207,9 +209,10 @@ def validate_repository_data(root: Path = Path("datasets")) -> dict[str, object]
             if not path.exists():
                 errors.append(f"Snapshot file is missing: {relative}")
                 continue
-            if int(expected.get("bytes", -1)) != path.stat().st_size:
+            content = _manifest_bytes(path)
+            if int(expected.get("bytes", -1)) != len(content):
                 errors.append(f"Snapshot byte size changed: {relative}")
-            if str(expected.get("sha256", "")) != _sha256(path):
+            if str(expected.get("sha256", "")) != _sha256_bytes(content):
                 errors.append(f"Snapshot hash changed: {relative}")
 
     return {
@@ -395,11 +398,18 @@ def _numeric_extreme(old: object, new: str, operation) -> str:
 
 
 def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return _sha256_bytes(_manifest_bytes(path))
+
+
+def _sha256_bytes(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def _manifest_bytes(path: Path) -> bytes:
+    content = path.read_bytes()
+    if path.suffix.lower() in MANIFEST_TEXT_SUFFIXES:
+        return content.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return content
 
 
 def build_parser() -> argparse.ArgumentParser:

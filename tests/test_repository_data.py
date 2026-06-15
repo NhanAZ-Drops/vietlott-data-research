@@ -49,6 +49,8 @@ def test_publish_and_hydrate_partitioned_dataset(tmp_path) -> None:
     manifest = json.loads(snapshot_path.read_text(encoding="utf-8"))
     assert manifest["dataset_rows"] == {"draws": 3, "prizes": 1}
     assert "weather/daily.csv" in manifest["files"]
+    (dataset_dir / "weather" / "daily.csv").write_bytes(b"date,temp\r\n2026-06-01,30\r\n")
+    assert validate_repository_data(dataset_dir)["valid"] is True
 
     hydrated = tmp_path / "hydrated"
     counts = hydrate_repository_data(dataset_dir, hydrated)
