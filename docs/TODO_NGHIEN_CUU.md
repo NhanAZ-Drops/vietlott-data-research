@@ -254,7 +254,15 @@ file để giữ lại dấu vết thay đổi.
     đóng góp chi-square của mọi ô. Website hiển thị bản đồ nhiệt nhưng không tính
     p-value mới cho từng ô. Khoảng tin cậy và độ ổn định tương lai còn chờ mẫu xác nhận.
 
-- [ ] `AUDIT-007` Phân rã theo hạng giải và loại kết quả nếu cấu trúc dữ liệu cho phép.
+- [x] `AUDIT-007` Phân rã theo hạng giải và loại kết quả nếu cấu trúc dữ liệu cho phép.
+  - Hoàn thành ngày 16/06/2026 trong commit `7a849cf8d308a27cd4738c0661f697c1b8823149`.
+  - `Observation` giữ thêm `tiered_outcomes` từ `result_json.tiers` và gắn `result_type`
+    (`full_sequence`, `wildcard_prefix`, `unusable`) để Max 4D vẫn ghi nhận hàng X wildcard nhưng
+    không đưa vào audit theo vị trí đầy đủ.
+  - `digit_position_chi_square.parameters.tier_breakdown` phân rã residual theo hạng giải cho
+    Max 3D, Max 3D Pro và Max 4D, chỉ là metadata giải thích và không tạo p-value mới.
+  - Website hiển thị bảng phân rã hạng giải, tài liệu hóa trong `docs/AUDIT_TIER_BREAKDOWN.md`, và
+    đã kiểm chứng bằng `ruff`, toàn bộ `pytest`, `vietlott-repository-data validate` cùng report mới.
 - [ ] `AUDIT-008` Kiểm tra tín hiệu theo các giai đoạn thời gian không chồng lấn.
 - [ ] `AUDIT-009` Kiểm tra tín hiệu riêng theo nguồn để loại trừ lỗi parser hoặc mirror.
 - [ ] `AUDIT-010` Thực hiện phân tích công suất và hiệu ứng nhỏ nhất có thể phát hiện.
