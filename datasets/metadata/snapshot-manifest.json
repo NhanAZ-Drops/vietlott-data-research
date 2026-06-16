@@ -606,9 +606,14 @@
       "data_rows": 6795,
       "sha256": "2303098d5015676155e0e668b812cf8f51517f8f729bd6adb501ac6558b6c3d5"
     },
+    "weather/daily.csv": {
+      "bytes": 670762,
+      "data_rows": 3612,
+      "sha256": "3be31915db6cc8b3ba74eab1b5de9c977db2d90c68706b232945893b6b51ed17"
+    },
     "weather/metadata.json": {
       "bytes": 2288,
-      "sha256": "043e23ac480d3629077c8c4d97e6d5a6e530d0396aa7846558908f569079eb73"
+      "sha256": "456c9c5ad124ed6657e7db58e2c37d2b03d5d2c6afd2ca5d667515fe514b5d2f"
     }
   },
   "methodology_versions": {
@@ -620,7 +625,7 @@
     "weather": "1.0.0"
   },
   "parser_version": "0.2.0",
-  "repository_commit": "0c09ef3ac75b4d4ec3e25db0ebd82d546223fc4f",
+  "repository_commit": "f424c5e7789b2c686e4733e06d154162b331aa8a",
   "schema_version": 1,
   "snapshot_at": "2026-06-16T12:23:17+00:00"
 }
