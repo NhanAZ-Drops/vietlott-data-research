@@ -15,12 +15,20 @@ from .catalog import AnalysisKind, AnalyticsProduct
 
 
 @dataclass(frozen=True, slots=True)
+class TieredOutcome:
+    tier: str
+    outcome: str
+    result_type: str
+
+
+@dataclass(frozen=True, slots=True)
 class Observation:
     draw_id: str
     draw_date: date
     values: tuple[int, ...] = ()
     special_values: tuple[int, ...] = ()
     outcomes: tuple[str, ...] = ()
+    tiered_outcomes: tuple[TieredOutcome, ...] = ()
 
     @property
     def ordering_key(self) -> tuple[date, int | str]:
@@ -179,15 +187,39 @@ def _to_observation(
 
     tiers = result.get("tiers")
     outcomes: list[str] = []
+    tiered_outcomes: list[TieredOutcome] = []
     if isinstance(tiers, dict):
-        for values in tiers.values():
+        for tier, values in tiers.items():
             if not isinstance(values, list):
                 continue
             for value in values:
-                text = str(value)
+                text = _normalize_outcome_text(value)
+                tiered_outcomes.append(
+                    TieredOutcome(
+                        tier=str(tier),
+                        outcome=text,
+                        result_type=_digit_result_type(text, product.sequence_length or 0),
+                    )
+                )
                 if text.isdigit() and len(text) == product.sequence_length:
                     outcomes.append(text)
-    return Observation(**common, outcomes=tuple(outcomes))
+    return Observation(
+        **common,
+        outcomes=tuple(outcomes),
+        tiered_outcomes=tuple(tiered_outcomes),
+    )
+
+
+def _normalize_outcome_text(value: object) -> str:
+    return str(value).replace("\xa0", "").replace(" ", "").strip()
+
+
+def _digit_result_type(text: str, length: int) -> str:
+    if text.isdigit() and len(text) == length:
+        return "full_sequence"
+    if text.startswith("X") and text.replace("X", "").isdigit() and len(text) == length:
+        return "wildcard_prefix"
+    return "unusable"
 
 
 def _optional_int(value: str | None) -> int | None:

@@ -12,7 +12,7 @@ from vietlott_analytics.fairness import (
     build_product_audit,
     finalize_audits,
 )
-from vietlott_analytics.io import Observation, ProductDataset
+from vietlott_analytics.io import Observation, ProductDataset, TieredOutcome
 
 
 def test_number_audit_contains_lightweight_fairness_tests() -> None:
@@ -135,3 +135,67 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
         position_test["statistic"],
         abs=1e-4,
     )
+
+
+def test_digit_position_audit_breaks_down_tiered_outcomes_without_new_p_values() -> None:
+    product = PRODUCTS["max4d"]
+
+    def sequence(seed: int) -> str:
+        return "".join(str((seed + offset) % 10) for offset in range(4))
+
+    observations = []
+    for index in range(60):
+        first = [sequence(index)]
+        second = [sequence(index + 11), sequence(index + 23)]
+        third = [sequence(index + 31), sequence(index + 43), sequence(index + 59)]
+        wildcard = [f"X{sequence(index + 71)[1:]}", f"XX{sequence(index + 83)[2:]}"]
+        tiered_outcomes = tuple(
+            TieredOutcome(tier=tier, outcome=outcome, result_type="full_sequence")
+            for tier, rows in (
+                ("first", first),
+                ("second", second),
+                ("third", third),
+            )
+            for outcome in rows
+        ) + tuple(
+            TieredOutcome(tier="consolation_1", outcome=outcome, result_type="wildcard_prefix")
+            for outcome in wildcard
+        )
+        observations.append(
+            Observation(
+                draw_id=str(index + 1).zfill(5),
+                draw_date=date(2024, 1, 1) + timedelta(days=index),
+                outcomes=tuple(
+                    item.outcome
+                    for item in tiered_outcomes
+                    if item.result_type == "full_sequence"
+                ),
+                tiered_outcomes=tiered_outcomes,
+            )
+        )
+
+    dataset = ProductDataset(
+        product=product,
+        observations=observations,
+        source_counts=Counter({"vietlott.vn": len(observations)}),
+        status_counts=Counter({"confirmed": len(observations)}),
+        validation_counts=Counter({"valid": len(observations)}),
+    )
+
+    audit = build_product_audit(dataset)
+    position_test = next(
+        item
+        for item in audit["tests"]
+        if item["id"] == "digit_position_chi_square"
+    )
+    breakdown = position_test["parameters"]["tier_breakdown"]
+
+    assert breakdown["status"] == "available"
+    assert breakdown["no_new_p_values"] is True
+    assert {row["result_type"] for row in breakdown["result_types"]} == {
+        "full_sequence",
+        "wildcard_prefix",
+    }
+    assert all(row["tier"] != "consolation_1" for row in breakdown["tiers"])
+    assert {row["tier"] for row in breakdown["tiers"]} == {"first", "second", "third"}
+    assert all(row["position_residuals"] for row in breakdown["tiers"])

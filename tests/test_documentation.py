@@ -10,6 +10,7 @@ def test_research_documentation_and_issue_templates_exist() -> None:
         ROOT / "docs" / "DATA_DICTIONARY.md",
         ROOT / "docs" / "AUDIT_EFFECT_THRESHOLDS.md",
         ROOT / "docs" / "AUDIT_TEST_DEPENDENCIES.md",
+        ROOT / "docs" / "AUDIT_TIER_BREAKDOWN.md",
         ROOT / "docs" / "METHODOLOGY_CHANGELOG.md",
         ROOT / "docs" / "templates" / "BAO_CAO_KET_QUA_AM.md",
         ROOT / "docs" / "DU_DOAN_BINGO18_0171884.md",
@@ -30,6 +31,7 @@ def test_readme_links_research_documents_without_em_dash() -> None:
     assert "docs/DATA_DICTIONARY.md" in readme
     assert "docs/AUDIT_EFFECT_THRESHOLDS.md" in readme
     assert "docs/AUDIT_TEST_DEPENDENCIES.md" in readme
+    assert "docs/AUDIT_TIER_BREAKDOWN.md" in readme
     assert "docs/METHODOLOGY_CHANGELOG.md" in readme
     assert "docs/templates/BAO_CAO_KET_QUA_AM.md" in readme
     assert "docs/DU_DOAN_BINGO18_0171884.md" in readme
@@ -66,3 +68,13 @@ def test_audit_dependency_documentation_has_required_fields() -> None:
     assert "high" in document
     assert "medium" in document
     assert "low" in document
+
+
+def test_audit_tier_breakdown_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_TIER_BREAKDOWN.md").read_text(encoding="utf-8")
+
+    assert "tier_breakdown" in document
+    assert "digit_position_chi_square" in document
+    assert "full_sequence" in document
+    assert "wildcard_prefix" in document
+    assert "không phải một bộ kiểm định mới" in document

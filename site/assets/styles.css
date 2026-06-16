@@ -1924,6 +1924,115 @@ a {
   color: var(--muted);
 }
 
+.position-tier-panel {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgb(10 46 47 / 10%);
+}
+
+.position-tier-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.position-tier-heading span,
+.position-result-types span,
+.position-tier-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.position-tier-heading strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.position-tier-heading p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.position-result-types,
+.position-tier-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.position-result-types {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.position-result-types article,
+.position-tier-grid article {
+  padding: 12px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.position-result-types article {
+  border-left: 4px solid #b9c8c0;
+}
+
+.position-result-types article.excluded {
+  border-left-color: #b7944f;
+  background: #fbf6ea;
+}
+
+.position-result-types strong,
+.position-tier-grid strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.position-result-types small {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.position-tier-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.position-tier-grid dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.position-tier-grid dl div {
+  min-height: 56px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #f5f1e8;
+}
+
+.position-tier-grid dt,
+.position-tier-grid dd {
+  margin: 0;
+}
+
+.position-tier-grid dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.position-tier-grid dd {
+  margin-top: 4px;
+  font-weight: 800;
+}
+
 .audit-family-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -3304,6 +3413,7 @@ a {
   .audit-log-lead,
   .audit-log-products,
   .audit-dependency-heading,
+  .position-tier-heading,
   .audit-test-row {
     grid-template-columns: 1fr;
   }
@@ -3393,6 +3503,8 @@ a {
     .audit-family-list,
     .audit-dependency-heading,
     .audit-dependency-grid,
+    .position-result-types,
+    .position-tier-grid,
     .audit-log-lead,
     .audit-log-products,
   .threshold-sensitivity-grid,
@@ -3432,6 +3544,10 @@ a {
   }
 
   .audit-test-row dl {
+    grid-template-columns: 1fr;
+  }
+
+  .position-tier-grid dl {
     grid-template-columns: 1fr;
   }
 

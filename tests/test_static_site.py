@@ -19,12 +19,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260615-12" in index
+    assert "assets/app.js?v=20260615-13" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260615-1" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260615-13" in page
+        assert "assets/styles.css?v=20260615-14" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -59,9 +59,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "audit-dependency-panel" in styles
     assert "audit-dependency-grid" in styles
     assert "renderAuditPositionResiduals" in app_script
+    assert "renderAuditTierBreakdown" in app_script
     assert "Ô nào đóng góp nhiều vào độ lệch tổng?" in app_script
+    assert "Phân rã residual, không tạo p-value mới" in app_script
     assert "threshold-sensitivity-grid" in styles
     assert "position-residual-grid" in styles
+    assert "position-tier-grid" in styles
     assert "audit-test-details" in app_script
     assert "audit-test-list-inner" in styles
     assert 'text("ribbon-product-count"' in app_script
@@ -201,5 +204,21 @@ def test_generated_site_data_matches_manifest() -> None:
         )
         assert report["audit"]["suite_version"] == "2.0.0"
         assert report["audit"]["dependency_matrix"]["pairs"]
+        if product["slug"] in {"max3d", "max4d"}:
+            position_test = next(
+                item
+                for item in report["audit"]["tests"]
+                if item["id"] == "digit_position_chi_square"
+            )
+            breakdown = position_test["parameters"]["tier_breakdown"]
+            assert breakdown["status"] == "available"
+            assert breakdown["no_new_p_values"] is True
+            assert breakdown["tiers"]
+            if product["slug"] == "max4d":
+                assert any(
+                    row["result_type"] == "wildcard_prefix"
+                    and row["usable_for_position_audit"] is False
+                    for row in breakdown["result_types"]
+                )
         assert report["backtest"]["recent_model"]["strategy"] == "recent_frequency"
         assert "recent_comparison" in report["backtest"]

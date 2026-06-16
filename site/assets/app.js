@@ -789,7 +789,47 @@ function renderAuditPositionResiduals(audit) {
         </div>
       </div>
       <small>${escapeHtml(test.parameters.residual_note || "")}</small>
+      ${renderAuditTierBreakdown(test)}
     </section>`;
+}
+
+function renderAuditTierBreakdown(test) {
+  const breakdown = test.parameters?.tier_breakdown;
+  if (!breakdown || breakdown.status === "not_applicable") return "";
+  const tiers = breakdown.tiers || [];
+  const resultTypes = breakdown.result_types || [];
+  if (!tiers.length && !resultTypes.length) return "";
+  return `
+    <div class="position-tier-panel" aria-label="Phân rã theo hạng giải">
+      <div class="position-tier-heading">
+        <div>
+          <span>Hạng giải và loại kết quả</span>
+          <strong>Phân rã residual, không tạo p-value mới</strong>
+        </div>
+        <p>${escapeHtml(breakdown.interpretation || "")}</p>
+      </div>
+      <div class="position-result-types">
+        ${resultTypes.map((item) => `
+          <article class="${item.usable_for_position_audit ? "usable" : "excluded"}">
+            <span>${escapeHtml(item.label || item.result_type)}</span>
+            <strong>${numberFormatter.format(item.outcomes || 0)}</strong>
+            <small>${escapeHtml(item.plain_language || "")}</small>
+          </article>`).join("")}
+      </div>
+      <div class="position-tier-grid">
+        ${tiers.map((tier) => `
+          <article>
+            <span>${escapeHtml(tier.tier_label || tier.tier)}</span>
+            <strong>${numberFormatter.format(tier.outcomes || 0)} kết quả</strong>
+            <dl>
+              <div><dt>Số kỳ</dt><dd>${numberFormatter.format(tier.draws || 0)}</dd></div>
+              <div><dt>Đóng góp χ²</dt><dd>${formatDecimal(tier.chi_square_contribution || 0, 3)}</dd></div>
+              <div><dt>Độ lớn</dt><dd>${formatDecimal(tier.effect_size || 0, 4)}</dd></div>
+              <div><dt>|residual|max</dt><dd>${formatDecimal(tier.max_abs_standardized_residual || 0, 3)}</dd></div>
+            </dl>
+          </article>`).join("")}
+      </div>
+    </div>`;
 }
 
 function renderAuditTestRow(test) {

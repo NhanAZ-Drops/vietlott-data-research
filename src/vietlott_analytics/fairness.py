@@ -15,6 +15,45 @@ from .io import ProductDataset
 AUDIT_SUITE_VERSION = "2.0.0"
 NORMAL = NormalDist()
 
+TIER_LABELS = {
+    "first": "Giải nhất",
+    "second": "Giải nhì",
+    "third": "Giải ba",
+    "special": "Giải đặc biệt",
+    "consolation_1": "Giải khuyến khích 1",
+    "consolation_2": "Giải khuyến khích 2",
+}
+
+TIER_ORDER = {
+    "special": 0,
+    "first": 1,
+    "second": 2,
+    "third": 3,
+    "consolation_1": 4,
+    "consolation_2": 5,
+}
+
+RESULT_TYPE_DESCRIPTIONS = {
+    "full_sequence": {
+        "label": "Chuỗi đầy đủ",
+        "usable_for_position_audit": True,
+        "plain_language": "Đủ số chữ số để đi vào kiểm định vị trí.",
+    },
+    "wildcard_prefix": {
+        "label": "Ký hiệu X ở đầu",
+        "usable_for_position_audit": False,
+        "plain_language": (
+            "Đây là luật trùng hậu tố như X589 hoặc XX89, không phải chuỗi đầy đủ "
+            "để kiểm định từng vị trí."
+        ),
+    },
+    "unusable": {
+        "label": "Không dùng được",
+        "usable_for_position_audit": False,
+        "plain_language": "Giá trị không khớp cấu trúc chuỗi chữ số đã khóa.",
+    },
+}
+
 FAMILY_DESCRIPTIONS = [
     {
         "id": "distribution_fit",
@@ -1202,12 +1241,154 @@ def _digit_position_test(
         parameters={
             "expected_per_position_digit": _round(expected),
             "position_residuals": residuals,
+            "tier_breakdown": _digit_tier_breakdown(dataset, symbols),
             "residual_note": (
                 "Residual được công bố để giải thích đóng góp vào kiểm định tổng. "
                 "Không dùng từng ô như một kiểm định độc lập mới."
             ),
         },
     )
+
+
+def _digit_tier_breakdown(
+    dataset: ProductDataset,
+    symbols: list[int],
+) -> dict[str, Any]:
+    product = dataset.product
+    length = product.sequence_length or 0
+    tiered_count = sum(len(observation.tiered_outcomes) for observation in dataset.observations)
+    if not tiered_count:
+        return {
+            "status": "not_applicable",
+            "basis": "result_json.tiers",
+            "reason": "Kết quả sản phẩm này không có cấu trúc hạng giải trong result_json.",
+            "result_types": [],
+            "tiers": [],
+            "no_new_p_values": True,
+        }
+
+    result_type_counts = Counter(
+        entry.result_type
+        for observation in dataset.observations
+        for entry in observation.tiered_outcomes
+    )
+    usable_by_tier: dict[str, list[str]] = {}
+    draws_by_tier: dict[str, set[str]] = {}
+    for observation in dataset.observations:
+        seen_tiers: set[str] = set()
+        for entry in observation.tiered_outcomes:
+            if entry.result_type != "full_sequence":
+                continue
+            if len(entry.outcome) != length or not entry.outcome.isdigit():
+                continue
+            usable_by_tier.setdefault(entry.tier, []).append(entry.outcome)
+            seen_tiers.add(entry.tier)
+        for tier in seen_tiers:
+            draws_by_tier.setdefault(tier, set()).add(observation.draw_id)
+
+    result_types = [
+        {
+            "result_type": result_type,
+            "label": RESULT_TYPE_DESCRIPTIONS.get(result_type, {}).get(
+                "label",
+                result_type,
+            ),
+            "outcomes": count,
+            "usable_for_position_audit": bool(
+                RESULT_TYPE_DESCRIPTIONS.get(result_type, {}).get(
+                    "usable_for_position_audit",
+                    False,
+                )
+            ),
+            "plain_language": RESULT_TYPE_DESCRIPTIONS.get(result_type, {}).get(
+                "plain_language",
+                "",
+            ),
+        }
+        for result_type, count in sorted(result_type_counts.items())
+    ]
+
+    tiers = [
+        _digit_tier_row(
+            tier=tier,
+            outcomes=outcomes,
+            draw_count=len(draws_by_tier.get(tier, set())),
+            symbols=symbols,
+            length=length,
+        )
+        for tier, outcomes in sorted(
+            usable_by_tier.items(),
+            key=lambda item: (TIER_ORDER.get(item[0], 99), item[0]),
+        )
+    ]
+    status = "available" if tiers else "no_full_sequence_tiers"
+    return {
+        "status": status,
+        "basis": "result_json.tiers",
+        "usable_result_type": "full_sequence",
+        "result_types": result_types,
+        "tiers": tiers,
+        "no_new_p_values": True,
+        "interpretation": (
+            "Các hàng theo hạng giải chỉ phân rã đóng góp của kiểm định vị trí tổng. "
+            "Không tính p-value riêng cho từng hạng trên cùng dữ liệu."
+        ),
+    }
+
+
+def _digit_tier_row(
+    *,
+    tier: str,
+    outcomes: list[str],
+    draw_count: int,
+    symbols: list[int],
+    length: int,
+) -> dict[str, Any]:
+    position_counts = [Counter() for _ in range(length)]
+    for outcome in outcomes:
+        for position, char in enumerate(outcome):
+            position_counts[position][int(char)] += 1
+    expected = len(outcomes) / len(symbols) if symbols else 0.0
+    residuals = [
+        {
+            "position": position + 1,
+            "digit": digit,
+            "observed": counter[digit],
+            "expected": _round(expected),
+            "standardized_residual": _round(
+                (counter[digit] - expected) / math.sqrt(expected)
+                if expected > 0
+                else 0.0
+            ),
+            "chi_square_contribution": _round(
+                ((counter[digit] - expected) ** 2) / expected
+                if expected > 0
+                else 0.0
+            ),
+        }
+        for position, counter in enumerate(position_counts)
+        for digit in symbols
+    ]
+    statistic = sum(item["chi_square_contribution"] for item in residuals)
+    max_abs_residual = max(
+        (abs(float(item["standardized_residual"])) for item in residuals),
+        default=0.0,
+    )
+    return {
+        "tier": tier,
+        "tier_label": TIER_LABELS.get(tier, tier),
+        "draws": draw_count,
+        "outcomes": len(outcomes),
+        "expected_per_position_digit": _round(expected),
+        "chi_square_contribution": _round(statistic),
+        "effect_size": _round(
+            math.sqrt(statistic / (len(outcomes) * length))
+            if outcomes and length
+            else 0.0
+        ),
+        "max_abs_standardized_residual": _round(max_abs_residual),
+        "position_residuals": residuals,
+    }
 
 
 def _digit_sum_distribution_test(
