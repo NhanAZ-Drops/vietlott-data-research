@@ -3611,3 +3611,4 @@ date,venue_id,venue_name,address,requested_latitude,requested_longitude,grid_lat
 2026-06-07,tam_trinh,Trung tâm QSMT tại VTC Online,"Tầng 21, tòa nhà VTC Online, số 18 Tam Trinh, Hà Nội",20.9949485,105.8618052,21.0,105.899994,32.2,28.6,36.0,64,ERA5-Land,open-meteo
 2026-06-08,tam_trinh,Trung tâm QSMT tại VTC Online,"Tầng 21, tòa nhà VTC Online, số 18 Tam Trinh, Hà Nội",20.9949485,105.8618052,21.0,105.899994,30.2,26.9,34.5,67,ERA5-Land,open-meteo
 2026-06-09,tam_trinh,Trung tâm QSMT tại VTC Online,"Tầng 21, tòa nhà VTC Online, số 18 Tam Trinh, Hà Nội",20.9949485,105.8618052,21.0,105.899994,25.3,23.8,27.8,74,ERA5-Land,open-meteo
+2026-06-10,tam_trinh,Trung tâm QSMT tại VTC Online,"Tầng 21, tòa nhà VTC Online, số 18 Tam Trinh, Hà Nội",20.9949485,105.8618052,21.0,105.899994,27.0,23.6,30.7,70,ERA5-Land,open-meteo
