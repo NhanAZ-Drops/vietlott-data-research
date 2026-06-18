@@ -563,6 +563,7 @@ function renderAuditProductCard(product) {
   const status = auditProductStatus(product);
   const signal = product.strongest_signal;
   const qValue = signal?.q_value_global_bh ?? signal?.q_value_bh;
+  const reliability = product.reliability_sensitivity || {};
   return `
     <article class="audit-product-card ${escapeHtml(status)}">
       <div class="audit-product-top">
@@ -585,8 +586,20 @@ function renderAuditProductCard(product) {
           <span>${escapeHtml(signal.algorithm)}</span>
           <em>q ${qValue == null ? "N/A" : formatPValue(qValue)}</em>
         </p>` : ""}
+      ${renderAuditProductReliabilityNote(reliability)}
       <p>${escapeHtml(product.conclusion || "")}</p>
     </article>`;
+}
+
+function renderAuditProductReliabilityNote(reliability) {
+  if (!reliability || !reliability.status) return "";
+  const low = reliability.low_reliability_confirmed_draws || 0;
+  const filtered = reliability.filtered_confirmed_draws || 0;
+  return `
+    <p class="audit-reliability-note">
+      <b>${escapeHtml(reliabilityStatusLabel(reliability.status))}</b>
+      <span>${numberFormatter.format(low)} kỳ provenance thấp · ${numberFormatter.format(filtered)} kỳ trong lát tin cậy</span>
+    </p>`;
 }
 
 function renderAuditStatusPill(status, value) {
@@ -636,6 +649,8 @@ function renderFairnessAudit(audit) {
   const practicallyLarge = counts.practically_large || 0;
   const pass = counts.pass || 0;
   const powerSummary = audit.power_summary || {};
+  const reliability = audit.reliability_sensitivity || {};
+  const reliabilityBaseline = reliability.baseline || {};
   const powerCoverage = powerSummary.supported_test_count
     ? `${numberFormatter.format(powerSummary.threshold_detectable_count || 0)}/${numberFormatter.format(powerSummary.supported_test_count)}`
     : "N/A";
@@ -655,6 +670,8 @@ function renderFairnessAudit(audit) {
     ["Độ lớn thực dụng", practicallyLarge],
     ["Đạt cả hai", both],
     ["Ngưỡng đủ công suất", powerCoverage],
+    ["Kỳ chưa xác nhận đã loại", reliabilityBaseline.not_confirmed_rows || 0],
+    ["Kỳ provenance thấp", reliability.low_reliability_confirmed_draws || 0],
     ["Chạy lại sau", `${numberFormatter.format(audit.audit_interval_draws)} kỳ`],
   ];
   document.getElementById("audit-product-metrics").innerHTML = metrics
@@ -683,6 +700,7 @@ function renderFairnessAudit(audit) {
   });
   const highlightedTests = ranked.slice(0, 8);
   document.getElementById("audit-test-list").innerHTML = `
+    ${renderAuditReliabilityPanel(audit)}
     <details class="audit-test-details">
       <summary>
         <span>Chi tiết kiểm định</span>
@@ -714,6 +732,55 @@ function renderFairnessAudit(audit) {
       Nhóm thuật toán nặng như HMM, MCMC, TestU01 đầy đủ và deep learning chưa chạy tự động
       trong phiên bản này vì chi phí cao và dễ khó giải thích.
     </p>`;
+}
+
+function renderAuditReliabilityPanel(audit) {
+  const sensitivity = audit.reliability_sensitivity;
+  if (!sensitivity) return "";
+  const baseline = sensitivity.baseline || {};
+  const largest = sensitivity.largest_effect_shift;
+  const rows = (sensitivity.comparisons || []).slice(0, 4);
+  return `
+    <article class="audit-reliability-panel ${escapeHtml(sensitivity.status || "unknown")}">
+      <div class="audit-reliability-heading">
+        <div>
+          <span>Độ nhạy dữ liệu tin cậy</span>
+          <strong>${escapeHtml(reliabilityStatusLabel(sensitivity.status))}</strong>
+        </div>
+        <p>${escapeHtml(sensitivity.interpretation || "")}</p>
+      </div>
+      <dl class="audit-reliability-metrics">
+        <div><dt>Kỳ chưa xác nhận</dt><dd>${numberFormatter.format(baseline.not_confirmed_rows || 0)}</dd></div>
+        <div><dt>Kỳ audit chính</dt><dd>${numberFormatter.format(baseline.confirmed_draws_in_audit || 0)}</dd></div>
+        <div><dt>Provenance thấp</dt><dd>${numberFormatter.format(sensitivity.low_reliability_confirmed_draws || 0)}</dd></div>
+        <div><dt>Lát tin cậy</dt><dd>${numberFormatter.format(sensitivity.filtered_confirmed_draws || 0)}</dd></div>
+        <div><dt>Phép so lại</dt><dd>${numberFormatter.format(sensitivity.compared_test_count || 0)}</dd></div>
+      </dl>
+      ${largest ? `
+        <p class="audit-reliability-strongest">
+          <b>${escapeHtml(largest.label || largest.test_id)}</b>
+          <span>Δ effect ${formatSigned(largest.effect_size_delta || 0, 4)} · mẫu ${numberFormatter.format(largest.filtered_sample_size || 0)}/${numberFormatter.format(largest.baseline_sample_size || 0)}</span>
+        </p>` : ""}
+      ${rows.length ? `
+        <div class="audit-reliability-comparisons">
+          ${rows.map((row) => `
+            <div>
+              <span>${escapeHtml(row.label)}</span>
+              <strong>${formatSigned(row.effect_size_delta || 0, 4)}</strong>
+              <small>${numberFormatter.format(row.filtered_sample_size || 0)}/${numberFormatter.format(row.baseline_sample_size || 0)} mẫu</small>
+            </div>`).join("")}
+        </div>` : ""}
+    </article>`;
+}
+
+function reliabilityStatusLabel(status) {
+  const labels = {
+    available: "Đã so lại lát tin cậy",
+    confirmed_only_baseline: "Baseline đã đủ tin cậy",
+    insufficient_reliable_history: "Thiếu lát tin cậy",
+    missing_confirmed_history: "Thiếu lịch sử confirmed",
+  };
+  return labels[status] || status || "Không rõ";
 }
 
 function renderAuditDependencyMatrix(audit) {

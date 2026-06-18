@@ -1054,6 +1054,29 @@ a {
   margin: 12px 0 0;
 }
 
+.audit-reliability-note {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #edf2ea;
+}
+
+.audit-reliability-note b,
+.audit-reliability-note span {
+  display: block;
+}
+
+.audit-reliability-note b {
+  color: var(--forest);
+  font-size: 12px;
+}
+
+.audit-reliability-note span {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
 .audit-log-actions {
   display: flex;
   gap: 10px;
@@ -1480,6 +1503,138 @@ a {
 
 .audit-test-list {
   display: block;
+}
+
+.audit-reliability-panel {
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-left-width: 5px;
+  border-radius: 18px;
+  background: rgb(255 253 247 / 72%);
+}
+
+.audit-reliability-panel.available {
+  border-left-color: var(--aqua);
+}
+
+.audit-reliability-panel.confirmed_only_baseline {
+  border-left-color: #9ab7a5;
+}
+
+.audit-reliability-panel.insufficient_reliable_history,
+.audit-reliability-panel.missing_confirmed_history {
+  border-left-color: var(--amber);
+}
+
+.audit-reliability-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.audit-reliability-heading span,
+.audit-reliability-comparisons span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.audit-reliability-heading strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--forest);
+  font-size: 18px;
+}
+
+.audit-reliability-heading p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.audit-reliability-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.audit-reliability-metrics div,
+.audit-reliability-comparisons div {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: #f5f1e8;
+}
+
+.audit-reliability-metrics dt,
+.audit-reliability-metrics dd {
+  margin: 0;
+}
+
+.audit-reliability-metrics dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.audit-reliability-metrics dd {
+  margin-top: 4px;
+  color: var(--forest);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.audit-reliability-strongest {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: #edf2ea;
+}
+
+.audit-reliability-strongest b,
+.audit-reliability-strongest span {
+  display: block;
+}
+
+.audit-reliability-strongest b {
+  color: var(--forest);
+}
+
+.audit-reliability-strongest span {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.audit-reliability-comparisons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.audit-reliability-comparisons strong,
+.audit-reliability-comparisons small {
+  display: block;
+}
+
+.audit-reliability-comparisons strong {
+  margin-top: 8px;
+  color: var(--forest);
+  font-size: 18px;
+}
+
+.audit-reliability-comparisons small {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .audit-test-details {
@@ -4064,6 +4219,8 @@ button.prediction-product-metric:focus-visible {
   .metric-grid,
   .audit-summary-grid,
   .audit-mini-grid,
+  .audit-reliability-metrics,
+  .audit-reliability-comparisons,
   .threshold-sensitivity-grid,
   .method-steps {
     grid-template-columns: repeat(2, 1fr);
@@ -4073,6 +4230,7 @@ button.prediction-product-metric:focus-visible {
   .audit-log-lead,
   .audit-log-products,
   .audit-dependency-heading,
+  .audit-reliability-heading,
   .position-tier-heading,
   .position-period-heading,
   .position-source-heading,
@@ -4166,6 +4324,9 @@ button.prediction-product-metric:focus-visible {
     .audit-family-list,
     .audit-dependency-heading,
     .audit-dependency-grid,
+    .audit-reliability-heading,
+    .audit-reliability-metrics,
+    .audit-reliability-comparisons,
     .position-result-types,
     .position-tier-grid,
     .position-period-grid,

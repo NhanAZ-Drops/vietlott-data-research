@@ -84,12 +84,16 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "renderAuditPeriodBreakdown" in app_script
     assert "renderAuditSourceBreakdown" in app_script
     assert "renderAuditSourceLeaveOneOut" in app_script
+    assert "renderAuditReliabilityPanel" in app_script
+    assert "reliability_sensitivity" in app_script
     assert "Ô nào đóng góp nhiều vào độ lệch tổng?" in app_script
     assert "Phân rã residual, không tạo p-value mới" in app_script
     assert "Giai đoạn không chồng lấn" in app_script
     assert "Nguồn dữ liệu" in app_script
     assert "Độ nhạy loại nguồn" in app_script
     assert "Bỏ một nguồn thì tín hiệu đổi bao nhiêu?" in app_script
+    assert "audit-reliability-panel" in styles
+    assert "audit-reliability-comparisons" in styles
     assert "threshold-sensitivity-grid" in styles
     assert "position-residual-grid" in styles
     assert "position-tier-grid" in styles
@@ -242,6 +246,9 @@ def test_generated_site_data_matches_manifest() -> None:
         report = json.loads(
             (data_root / "products" / f"{product['slug']}.json").read_text(encoding="utf-8")
         )
+        summary_product = next(
+            item for item in audit_summary["products"] if item["slug"] == product["slug"]
+        )
         assert report["product"]["slug"] == product["slug"]
         assert report["summary"]["confirmed_draws"] == product["confirmed_draws"]
         assert (
@@ -255,6 +262,24 @@ def test_generated_site_data_matches_manifest() -> None:
         assert report["audit"]["suite_version"] == "2.0.0"
         assert report["audit"]["dependency_matrix"]["pairs"]
         assert report["audit"]["power_summary"]["supported_test_count"] > 0
+        reliability = report["audit"]["reliability_sensitivity"]
+        assert reliability["basis"] == "draw_status plus source_verification"
+        assert reliability["no_new_p_values"] is True
+        assert reliability["baseline"]["audit_uses_confirmed_only"] is True
+        assert (
+            reliability["baseline"]["confirmed_draws_in_audit"]
+            == report["audit"]["history_draws"]
+        )
+        assert isinstance(reliability["comparisons"], list)
+        for comparison in reliability["comparisons"]:
+            assert all(
+                not key.startswith(("p_value", "q_value"))
+                for key in comparison
+            )
+        assert summary_product["reliability_sensitivity"]["status"] == reliability[
+            "status"
+        ]
+        assert summary_product["reliability_sensitivity"]["no_new_p_values"] is True
         active_tests = [
             item
             for item in report["audit"]["tests"]

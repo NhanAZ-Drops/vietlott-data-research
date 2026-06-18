@@ -29,6 +29,9 @@ backtest hoặc cách đọc website. Thay đổi giao diện thuần túy khôn
 - Thêm `parameters.source_leave_one_out` cho `digit_position_chi_square`, loại
   từng nguồn dữ liệu rồi tính lại chi-square và độ lớn hiệu ứng để đọc độ nhạy
   provenance; bảng này không tạo p-value, q-value hoặc status mới
+- Thêm `reliability_sensitivity` ở cấp audit sản phẩm, xác nhận audit chính đã
+  loại `not_confirmed` và so lại statistic/effect trên lát `source_verification`
+  đáng tin cậy khi đủ mẫu; bảng này không tạo p-value, q-value hoặc status mới
 
 ## 15/06/2026
 

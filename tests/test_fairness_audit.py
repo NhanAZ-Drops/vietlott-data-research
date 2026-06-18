@@ -205,7 +205,7 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
         product=product,
         observations=observations,
         source_counts=Counter({"vietlott.vn": 120}),
-        status_counts=Counter({"confirmed": 120}),
+        status_counts=Counter({"confirmed": 120, "not_confirmed": 3}),
         validation_counts=Counter({"valid": 120}),
     )
     report = {
@@ -226,6 +226,14 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
     assert summary["threshold_sensitivity"]["multipliers"] == [0.5, 1.0, 1.5, 2.0]
     assert summary["power_summary"]["method"] == "normal_approximation"
     assert summary["power_summary"]["supported_test_count"] > 0
+    product_summary = summary["products"][0]
+    assert product_summary["reliability_sensitivity"]["status"] == "available"
+    assert product_summary["reliability_sensitivity"]["not_confirmed_rows"] == 3
+    assert product_summary["reliability_sensitivity"]["filtered_confirmed_draws"] == 60
+    assert (
+        product_summary["reliability_sensitivity"]["low_reliability_confirmed_draws"]
+        == 60
+    )
     assert any(
         entry["test_count"] > 0
         for entry in summary["threshold_sensitivity"]["by_threshold"]
@@ -242,6 +250,10 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
     assert any(event["change_point_candidate_count"] is not None for event in events)
     assert any(event["change_point_adjusted_p_value"] is not None for event in events)
     assert any(event["q_value_dependency_family_bh"] is not None for event in events)
+    assert any(event["reliability_sensitivity_status"] == "available" for event in events)
+    assert any(event["reliability_low_reliability_draws"] == 60 for event in events)
+    assert any(event["reliability_filtered_draws"] == 60 for event in events)
+    assert any(event["reliability_compared_test_count"] for event in events)
     assert all(
         "q_value_global_bh" in test
         for test in report["audit"]["tests"]
@@ -268,6 +280,20 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
     period_breakdown = position_test["parameters"]["period_breakdown"]
     assert period_breakdown["status"] == "available"
     assert period_breakdown["no_new_p_values"] is True
+    reliability = report["audit"]["reliability_sensitivity"]
+    assert reliability["status"] == "available"
+    assert reliability["no_new_p_values"] is True
+    assert reliability["basis"] == "draw_status plus source_verification"
+    assert reliability["baseline"]["audit_uses_confirmed_only"] is True
+    assert reliability["baseline"]["not_confirmed_rows"] == 3
+    assert reliability["baseline"]["confirmed_draws_in_audit"] == 120
+    assert reliability["filtered_confirmed_draws"] == 60
+    assert reliability["low_reliability_confirmed_draws"] == 60
+    assert reliability["compared_test_count"] > 0
+    assert reliability["comparisons"]
+    assert reliability["largest_effect_shift"]
+    assert all("p_value" not in row for row in reliability["comparisons"])
+    assert all("q_value" not in row for row in reliability["comparisons"])
     assert period_breakdown["segment_count"] == 3
     assert [segment["draws"] for segment in period_breakdown["segments"]] == [40, 40, 40]
     assert all("p_value" not in segment for segment in period_breakdown["segments"])

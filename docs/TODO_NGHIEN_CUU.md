@@ -345,8 +345,17 @@ file để giữ lại dấu vết thay đổi.
   - Website hiển thị panel "Độ nhạy loại nguồn"; tài liệu hóa trong
     `docs/AUDIT_SOURCE_SENSITIVITY.md` và khóa bằng unit test, documentation test,
     static-site test.
-- [ ] `AUDIT-016` Thêm kiểm tra độ nhạy khi loại các kỳ chưa xác nhận và vùng lịch sử
+- [x] `AUDIT-016` Thêm kiểm tra độ nhạy khi loại các kỳ chưa xác nhận và vùng lịch sử
   có độ tin cậy thấp.
+  - Hoàn thành ngày 18/06/2026.
+  - `audit.reliability_sensitivity` xác nhận audit chính chỉ dùng kỳ `confirmed`,
+    đếm riêng kỳ `not_confirmed` đã loại và chạy lại statistic/effect trên lát
+    `source_verification` đáng tin cậy khi đủ mẫu.
+  - Bảng công bố `no_new_p_values = true`, không tạo p-value, q-value hoặc trạng thái
+    kiểm định mới; summary và `audit-log.jsonl` có trường tóm tắt để truy vết.
+  - Website hiển thị panel "Độ nhạy dữ liệu tin cậy"; tài liệu hóa trong
+    `docs/AUDIT_RELIABILITY_SENSITIVITY.md` và khóa bằng unit test, documentation
+    test, static-site test.
 
 ## P1 - Củng cố backtest
 

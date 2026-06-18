@@ -21,6 +21,13 @@ DIGIT_PERIOD_TOP_RESIDUALS = 5
 DIGIT_SOURCE_MIN_DRAWS = 30
 DIGIT_SOURCE_TOP_RESIDUALS = 5
 DIGIT_SOURCE_LEAVE_ONE_OUT_TOP_RESIDUALS = 5
+RELIABILITY_FILTER_MIN_DRAWS = 30
+
+RELIABLE_SOURCE_VERIFICATIONS = {
+    "official_direct",
+    "official_verified_match",
+    "multi_source_consensus",
+}
 
 SOURCE_LABELS = {
     "official_vietlott": "Vietlott chính thức",
@@ -580,6 +587,9 @@ def finalize_audits(product_reports: list[dict[str, Any]]) -> dict[str, Any]:
                 "status_counts": report["audit"]["status_counts"],
                 "strongest_signal": report["audit"]["strongest_signal"],
                 "power_summary": report["audit"].get("power_summary"),
+                "reliability_sensitivity": _reliability_sensitivity_summary(
+                    report["audit"].get("reliability_sensitivity", {})
+                ),
                 "conclusion": report["audit"]["conclusion"],
                 "next_recommended_audit_after_draws": report["audit"][
                     "next_recommended_audit_after_draws"
@@ -609,6 +619,7 @@ def audit_log_events(product_reports: list[dict[str, Any]]) -> Iterator[dict[str
             strongest_source_shift = (
                 source_leave_one_out.get("strongest_effect_shift") or {}
             )
+            reliability_sensitivity = audit.get("reliability_sensitivity", {})
             yield {
                 "schema_version": 1,
                 "event_type": "fairness_audit_test",
@@ -674,6 +685,16 @@ def audit_log_events(product_reports: list[dict[str, Any]]) -> Iterator[dict[str
                 "source_leave_one_out_strongest_effect_delta": strongest_source_shift.get(
                     "effect_size_delta"
                 ),
+                "reliability_sensitivity_status": reliability_sensitivity.get("status"),
+                "reliability_low_reliability_draws": reliability_sensitivity.get(
+                    "low_reliability_confirmed_draws"
+                ),
+                "reliability_filtered_draws": reliability_sensitivity.get(
+                    "filtered_confirmed_draws"
+                ),
+                "reliability_compared_test_count": reliability_sensitivity.get(
+                    "compared_test_count"
+                ),
                 "statistically_notable": test.get("statistically_notable"),
                 "practically_large": test.get("practically_large"),
                 "interpretation": test["interpretation"],
@@ -692,6 +713,223 @@ def dump_jsonl(events: Iterable[dict[str, Any]]) -> str:
         + "\n"
         for event in events
     )
+
+
+def _reliability_sensitivity(
+    dataset: ProductDataset,
+    baseline_tests: list[dict[str, Any]],
+) -> dict[str, Any]:
+    confirmed_draws = len(dataset.observations)
+    not_confirmed_rows = int(dataset.status_counts.get("not_confirmed", 0))
+    total_rows = sum(dataset.status_counts.values()) or confirmed_draws
+    verification_counts = Counter(
+        observation.source_verification or "unknown"
+        for observation in dataset.observations
+    )
+    reliable_observations = [
+        observation
+        for observation in dataset.observations
+        if (observation.source_verification or "unknown") in RELIABLE_SOURCE_VERIFICATIONS
+    ]
+    filtered_draws = len(reliable_observations)
+    low_reliability_draws = confirmed_draws - filtered_draws
+    baseline = {
+        "total_rows": total_rows,
+        "confirmed_rows": int(dataset.status_counts.get("confirmed", confirmed_draws)),
+        "not_confirmed_rows": not_confirmed_rows,
+        "audit_uses_confirmed_only": True,
+        "confirmed_draws_in_audit": confirmed_draws,
+        "filtered_confirmed_draws": filtered_draws,
+        "low_reliability_confirmed_draws": low_reliability_draws,
+        "source_verification_counts": _counter_rows(verification_counts),
+    }
+    base_payload = {
+        "method": "confirmed_only_and_reliable_source_filter",
+        "basis": "draw_status plus source_verification",
+        "reliable_source_verification": sorted(RELIABLE_SOURCE_VERIFICATIONS),
+        "min_filtered_draws": RELIABILITY_FILTER_MIN_DRAWS,
+        "baseline": baseline,
+        "no_new_p_values": True,
+    }
+    if confirmed_draws == 0:
+        return {
+            **base_payload,
+            "status": "missing_confirmed_history",
+            "filtered_confirmed_draws": 0,
+            "low_reliability_confirmed_draws": 0,
+            "compared_test_count": 0,
+            "comparisons": [],
+            "largest_effect_shift": None,
+            "interpretation": "Không có kỳ confirmed để chạy kiểm tra độ nhạy dữ liệu.",
+        }
+
+    if low_reliability_draws == 0:
+        return {
+            **base_payload,
+            "status": "confirmed_only_baseline",
+            "filtered_confirmed_draws": filtered_draws,
+            "low_reliability_confirmed_draws": 0,
+            "compared_test_count": 0,
+            "comparisons": [],
+            "largest_effect_shift": None,
+            "interpretation": (
+                "Audit chính đã loại kỳ not_confirmed; không còn kỳ confirmed nào thuộc "
+                "nhóm source_verification độ tin cậy thấp để chạy so sánh loại trừ."
+            ),
+        }
+
+    if filtered_draws < RELIABILITY_FILTER_MIN_DRAWS:
+        return {
+            **base_payload,
+            "status": "insufficient_reliable_history",
+            "filtered_confirmed_draws": filtered_draws,
+            "low_reliability_confirmed_draws": low_reliability_draws,
+            "compared_test_count": 0,
+            "comparisons": [],
+            "largest_effect_shift": None,
+            "interpretation": (
+                "Sau khi loại các kỳ confirmed có provenance yếu, lát còn lại chưa đủ "
+                "kỳ tối thiểu để đọc độ nhạy ổn định."
+            ),
+        }
+
+    filtered_dataset = _dataset_with_observations(dataset, reliable_observations)
+    filtered_tests = (
+        _number_set_tests(filtered_dataset)
+        if dataset.product.kind is AnalysisKind.NUMBER_SET
+        else _digit_sequence_tests(filtered_dataset)
+    )
+    filtered_by_id = {test["id"]: test for test in filtered_tests}
+    comparisons = [
+        row
+        for test in baseline_tests
+        if (row := _reliability_test_comparison(test, filtered_by_id.get(test["id"])))
+        is not None
+    ]
+    comparisons.sort(
+        key=lambda row: (
+            -abs(float(row["effect_size_delta"] or 0.0)),
+            str(row["test_id"]),
+        )
+    )
+    largest_effect_shift = comparisons[0] if comparisons else None
+    return {
+        **base_payload,
+        "status": "available",
+        "filtered_confirmed_draws": filtered_draws,
+        "low_reliability_confirmed_draws": low_reliability_draws,
+        "compared_test_count": len(comparisons),
+        "comparisons": comparisons,
+        "largest_effect_shift": _largest_reliability_shift(largest_effect_shift),
+        "interpretation": (
+            "So sánh lại cùng phép kiểm trên lát kỳ confirmed có source_verification đáng tin cậy. "
+            "Các dòng chỉ công bố statistic, effect và chênh lệch mẫu; không tạo p-value, "
+            "q-value hoặc status mới."
+        ),
+    }
+
+
+def _dataset_with_observations(
+    dataset: ProductDataset,
+    observations: list[Any],
+) -> ProductDataset:
+    draw_ids = {observation.draw_id for observation in observations}
+    return ProductDataset(
+        product=dataset.product,
+        observations=list(observations),
+        source_counts=Counter(observation.source_host for observation in observations),
+        data_source_counts=Counter(observation.data_source for observation in observations),
+        status_counts=Counter({"confirmed": len(observations)}),
+        validation_counts=Counter(),
+        source_origin_counts=Counter(
+            observation.source_origin for observation in observations
+        ),
+        source_verification_counts=Counter(
+            observation.source_verification for observation in observations
+        ),
+        latest_fetched_at=dataset.latest_fetched_at,
+        jackpot_values=[
+            item
+            for item in dataset.jackpot_values
+            if item[0] in draw_ids
+        ],
+    )
+
+
+def _reliability_test_comparison(
+    baseline_test: dict[str, Any],
+    filtered_test: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if filtered_test is None:
+        return None
+    baseline_statistic = baseline_test.get("statistic")
+    filtered_statistic = filtered_test.get("statistic")
+    baseline_effect = baseline_test.get("effect_size")
+    filtered_effect = filtered_test.get("effect_size")
+    if not isinstance(baseline_effect, (int, float)) or not isinstance(
+        filtered_effect,
+        (int, float),
+    ):
+        return None
+    statistic_delta = (
+        _round(float(filtered_statistic) - float(baseline_statistic))
+        if isinstance(baseline_statistic, (int, float))
+        and isinstance(filtered_statistic, (int, float))
+        else None
+    )
+    baseline_sample = int(baseline_test.get("sample_size") or 0)
+    filtered_sample = int(filtered_test.get("sample_size") or 0)
+    return {
+        "test_id": baseline_test["id"],
+        "label": baseline_test["label"],
+        "algorithm": baseline_test["algorithm"],
+        "family": baseline_test["family"],
+        "baseline_sample_size": baseline_sample,
+        "filtered_sample_size": filtered_sample,
+        "sample_size_delta": filtered_sample - baseline_sample,
+        "baseline_statistic": baseline_statistic,
+        "filtered_statistic": filtered_statistic,
+        "statistic_delta": statistic_delta,
+        "baseline_effect_size": baseline_effect,
+        "filtered_effect_size": filtered_effect,
+        "effect_size_delta": _round(float(filtered_effect) - float(baseline_effect)),
+        "baseline_effect_size_name": baseline_test.get("effect_size_name"),
+        "filtered_effect_size_name": filtered_test.get("effect_size_name"),
+    }
+
+
+def _largest_reliability_shift(row: dict[str, Any] | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    return {
+        "test_id": row["test_id"],
+        "label": row["label"],
+        "baseline_sample_size": row["baseline_sample_size"],
+        "filtered_sample_size": row["filtered_sample_size"],
+        "effect_size_delta": row["effect_size_delta"],
+        "statistic_delta": row["statistic_delta"],
+    }
+
+
+def _reliability_sensitivity_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    if not payload:
+        return {}
+    largest = payload.get("largest_effect_shift") or {}
+    return {
+        "status": payload.get("status"),
+        "method": payload.get("method"),
+        "not_confirmed_rows": payload.get("baseline", {}).get("not_confirmed_rows"),
+        "confirmed_draws_in_audit": payload.get("baseline", {}).get(
+            "confirmed_draws_in_audit"
+        ),
+        "filtered_confirmed_draws": payload.get("filtered_confirmed_draws"),
+        "low_reliability_confirmed_draws": payload.get(
+            "low_reliability_confirmed_draws"
+        ),
+        "compared_test_count": payload.get("compared_test_count"),
+        "largest_effect_shift": largest,
+        "no_new_p_values": payload.get("no_new_p_values"),
+    }
 
 
 def _audit_payload(dataset: ProductDataset, tests: list[dict[str, Any]]) -> dict[str, Any]:
@@ -717,6 +955,7 @@ def _audit_payload(dataset: ProductDataset, tests: list[dict[str, Any]]) -> dict
         "multiple_testing": _multiple_testing_metadata(),
         "effect_thresholds": _effect_threshold_metadata(),
         "power_summary": _power_summary(tests),
+        "reliability_sensitivity": _reliability_sensitivity(dataset, tests),
         "status_counts": dict(Counter(test["status"] for test in tests)),
         "strongest_signal": _strongest_signal(tests),
         "conclusion": _audit_conclusion(tests),
