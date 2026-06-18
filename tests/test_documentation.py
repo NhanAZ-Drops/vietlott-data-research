@@ -15,6 +15,7 @@ def test_research_documentation_and_issue_templates_exist() -> None:
         ROOT / "docs" / "AUDIT_SOURCE_BREAKDOWN.md",
         ROOT / "docs" / "AUDIT_POWER_ANALYSIS.md",
         ROOT / "docs" / "AUDIT_PERMUTATION_CHECKS.md",
+        ROOT / "docs" / "AUDIT_BLOCK_BOOTSTRAP.md",
         ROOT / "docs" / "METHODOLOGY_CHANGELOG.md",
         ROOT / "docs" / "templates" / "BAO_CAO_KET_QUA_AM.md",
         ROOT / "docs" / "DU_DOAN_BINGO18_0171884.md",
@@ -40,6 +41,7 @@ def test_readme_links_research_documents_without_em_dash() -> None:
     assert "docs/AUDIT_SOURCE_BREAKDOWN.md" in readme
     assert "docs/AUDIT_POWER_ANALYSIS.md" in readme
     assert "docs/AUDIT_PERMUTATION_CHECKS.md" in readme
+    assert "docs/AUDIT_BLOCK_BOOTSTRAP.md" in readme
     assert "docs/METHODOLOGY_CHANGELOG.md" in readme
     assert "docs/templates/BAO_CAO_KET_QUA_AM.md" in readme
     assert "docs/DU_DOAN_BINGO18_0171884.md" in readme
@@ -125,4 +127,14 @@ def test_audit_permutation_documentation_has_required_fields() -> None:
     assert "whole_observation_label_permutation" in document
     assert "empirical_p_value" in document
     assert "preserve_unit" in document
+    assert "no_multiple_testing_decision" in document
+
+
+def test_audit_block_bootstrap_documentation_has_required_fields() -> None:
+    document = (ROOT / "docs" / "AUDIT_BLOCK_BOOTSTRAP.md").read_text(encoding="utf-8")
+
+    assert "block_bootstrap_check" in document
+    assert "moving_block_bootstrap" in document
+    assert "confidence_interval_lower" in document
+    assert "contiguous_observation_blocks" in document
     assert "no_multiple_testing_decision" in document

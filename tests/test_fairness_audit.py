@@ -110,6 +110,19 @@ def test_number_audit_contains_lightweight_fairness_tests() -> None:
         assert permutation["sampling_method"] == "full_sequence"
         assert permutation["no_multiple_testing_decision"] is True
         assert 0 <= permutation["empirical_p_value"] <= 1
+        bootstrap = next(
+            test["parameters"]["block_bootstrap_check"]
+            for test in active_tests
+            if test["id"] == test_id
+        )
+        assert bootstrap["status"] == "available"
+        assert bootstrap["method"] == "moving_block_bootstrap"
+        assert bootstrap["resamples"] == 199
+        assert len(bootstrap["seed"]) == 16
+        assert bootstrap["sampling_method"] == "full_sequence"
+        assert bootstrap["preserve_time_structure"] == "contiguous_observation_blocks"
+        assert bootstrap["no_multiple_testing_decision"] is True
+        assert bootstrap["confidence_interval_lower"] <= bootstrap["confidence_interval_upper"]
 
 
 def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
@@ -166,6 +179,8 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
     assert any(event["power_status"] == "available" for event in events)
     assert any(event["permutation_status"] == "available" for event in events)
     assert any(event["permutation_p_value"] is not None for event in events)
+    assert any(event["block_bootstrap_status"] == "available" for event in events)
+    assert any(event["block_bootstrap_interval_lower"] is not None for event in events)
     assert any(event["q_value_dependency_family_bh"] is not None for event in events)
     assert all(
         "q_value_global_bh" in test
@@ -229,6 +244,14 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
     assert digit_permutation["status"] == "available"
     assert digit_permutation["preserve_unit"] == "whole_digit_value"
     assert digit_permutation["no_multiple_testing_decision"] is True
+    digit_bootstrap = next(
+        item["parameters"]["block_bootstrap_check"]
+        for item in report["audit"]["tests"]
+        if item["id"] == "digit_value_lag1_autocorrelation"
+    )
+    assert digit_bootstrap["status"] == "available"
+    assert digit_bootstrap["preserve_time_structure"] == "contiguous_observation_blocks"
+    assert digit_bootstrap["no_multiple_testing_decision"] is True
 
 
 def test_digit_position_audit_breaks_down_tiered_outcomes_without_new_p_values() -> None:

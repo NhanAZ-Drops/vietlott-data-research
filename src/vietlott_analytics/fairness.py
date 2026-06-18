@@ -276,6 +276,10 @@ POWER_NULL_EFFECTS = {"repeat pairs ratio": 1.0}
 PERMUTATION_COUNT = 499
 PERMUTATION_MIN_VALUES = 20
 PERMUTATION_MAX_VALUES = 5000
+BLOCK_BOOTSTRAP_RESAMPLES = 199
+BLOCK_BOOTSTRAP_MIN_VALUES = 30
+BLOCK_BOOTSTRAP_MAX_VALUES = 2500
+BLOCK_BOOTSTRAP_CONFIDENCE_LEVEL = 0.95
 
 EFFECT_THRESHOLD_REGISTRY = [
     {
@@ -584,6 +588,10 @@ def audit_log_events(product_reports: list[dict[str, Any]]) -> Iterator[dict[str
         product = report["product"]
         for test in audit["tests"]:
             permutation_check = test.get("parameters", {}).get("permutation_check", {})
+            block_bootstrap_check = test.get("parameters", {}).get(
+                "block_bootstrap_check",
+                {},
+            )
             yield {
                 "schema_version": 1,
                 "event_type": "fairness_audit_test",
@@ -622,6 +630,14 @@ def audit_log_events(product_reports: list[dict[str, Any]]) -> Iterator[dict[str
                 "permutation_status": permutation_check.get("status"),
                 "permutation_p_value": permutation_check.get("empirical_p_value"),
                 "permutation_preserve_unit": permutation_check.get("preserve_unit"),
+                "block_bootstrap_status": block_bootstrap_check.get("status"),
+                "block_bootstrap_interval_lower": block_bootstrap_check.get(
+                    "confidence_interval_lower"
+                ),
+                "block_bootstrap_interval_upper": block_bootstrap_check.get(
+                    "confidence_interval_upper"
+                ),
+                "block_bootstrap_block_length": block_bootstrap_check.get("block_length"),
                 "statistically_notable": test.get("statistically_notable"),
                 "practically_large": test.get("practically_large"),
                 "interpretation": test["interpretation"],
@@ -944,15 +960,28 @@ def _split_half_statistics(values: list[int]) -> dict[str, float] | None:
     }
 
 
-def _permutation_sample_values(values: list[int]) -> tuple[list[int], str]:
-    if len(values) <= PERMUTATION_MAX_VALUES:
+def _diagnostic_sample_values(values: list[int], max_values: int) -> tuple[list[int], str]:
+    if len(values) <= max_values:
         return list(values), "full_sequence"
-    step = len(values) / PERMUTATION_MAX_VALUES
+    step = len(values) / max_values
     sampled = [
         values[min(len(values) - 1, int(index * step))]
-        for index in range(PERMUTATION_MAX_VALUES)
+        for index in range(max_values)
     ]
     return sampled, "deterministic_even_spacing"
+
+
+def _diagnostic_seed(
+    *,
+    test_id: str,
+    values: list[int],
+    method_version: str,
+) -> tuple[str, str]:
+    values_hash = hashlib.sha256(",".join(str(value) for value in values).encode()).hexdigest()
+    seed_hex = hashlib.sha256(
+        f"{test_id}:{len(values)}:{values_hash}:{method_version}".encode()
+    ).hexdigest()[:16]
+    return seed_hex, values_hash
 
 
 def _permutation_check(
@@ -974,7 +1003,7 @@ def _permutation_check(
             "no_multiple_testing_decision": True,
         }
 
-    sampled_values, sampling_method = _permutation_sample_values(values)
+    sampled_values, sampling_method = _diagnostic_sample_values(values, PERMUTATION_MAX_VALUES)
     observed = statistic_fn(sampled_values)
     if observed is None:
         return {
@@ -987,10 +1016,11 @@ def _permutation_check(
             "no_multiple_testing_decision": True,
         }
 
-    values_hash = hashlib.sha256(",".join(str(value) for value in values).encode()).hexdigest()
-    seed_hex = hashlib.sha256(
-        f"{test_id}:{full_count}:{values_hash}:permutation-v1".encode()
-    ).hexdigest()[:16]
+    seed_hex, _values_hash = _diagnostic_seed(
+        test_id=test_id,
+        values=values,
+        method_version="permutation-v1",
+    )
     rng = random.Random(int(seed_hex, 16))
     extreme = 0
     for _ in range(PERMUTATION_COUNT):
@@ -1022,6 +1052,114 @@ def _permutation_check(
     }
 
 
+def _block_bootstrap_check(
+    *,
+    test_id: str,
+    values: list[int],
+    statistic_name: str,
+    statistic_fn: Callable[[list[int]], float | None],
+) -> dict[str, Any]:
+    full_count = len(values)
+    if full_count < BLOCK_BOOTSTRAP_MIN_VALUES:
+        return {
+            "status": "not_available",
+            "method": "moving_block_bootstrap",
+            "reason": "Không đủ quan sát để chạy block bootstrap đã khóa.",
+            "minimum_values": BLOCK_BOOTSTRAP_MIN_VALUES,
+            "full_value_count": full_count,
+            "no_multiple_testing_decision": True,
+        }
+
+    sampled_values, sampling_method = _diagnostic_sample_values(
+        values,
+        BLOCK_BOOTSTRAP_MAX_VALUES,
+    )
+    observed = statistic_fn(sampled_values)
+    if observed is None:
+        return {
+            "status": "not_available",
+            "method": "moving_block_bootstrap",
+            "reason": "Thống kê không xác định trên mẫu block bootstrap.",
+            "full_value_count": full_count,
+            "bootstrap_value_count": len(sampled_values),
+            "sampling_method": sampling_method,
+            "no_multiple_testing_decision": True,
+        }
+
+    block_length = _block_bootstrap_length(len(sampled_values))
+    starts = list(range(0, max(1, len(sampled_values) - block_length + 1)))
+    seed_hex, _values_hash = _diagnostic_seed(
+        test_id=test_id,
+        values=values,
+        method_version="block-bootstrap-v1",
+    )
+    rng = random.Random(int(seed_hex, 16))
+    statistics: list[float] = []
+    for _ in range(BLOCK_BOOTSTRAP_RESAMPLES):
+        bootstrapped: list[int] = []
+        while len(bootstrapped) < len(sampled_values):
+            start = rng.choice(starts)
+            bootstrapped.extend(sampled_values[start : start + block_length])
+        candidate = statistic_fn(bootstrapped[: len(sampled_values)])
+        if candidate is not None and math.isfinite(candidate):
+            statistics.append(candidate)
+
+    if not statistics:
+        return {
+            "status": "not_available",
+            "method": "moving_block_bootstrap",
+            "reason": "Không tạo được thống kê bootstrap hợp lệ.",
+            "full_value_count": full_count,
+            "bootstrap_value_count": len(sampled_values),
+            "block_length": block_length,
+            "sampling_method": sampling_method,
+            "no_multiple_testing_decision": True,
+        }
+
+    ordered = sorted(statistics)
+    alpha = 1 - BLOCK_BOOTSTRAP_CONFIDENCE_LEVEL
+    lower = _percentile(ordered, alpha / 2)
+    upper = _percentile(ordered, 1 - alpha / 2)
+    return {
+        "status": "available",
+        "method": "moving_block_bootstrap",
+        "resamples": BLOCK_BOOTSTRAP_RESAMPLES,
+        "seed": seed_hex,
+        "statistic_name": statistic_name,
+        "observed_statistic": _round(observed),
+        "bootstrap_mean": _round(fmean(statistics)),
+        "confidence_level": BLOCK_BOOTSTRAP_CONFIDENCE_LEVEL,
+        "confidence_interval_lower": _round(lower),
+        "confidence_interval_upper": _round(upper),
+        "block_length": block_length,
+        "full_value_count": full_count,
+        "bootstrap_value_count": len(sampled_values),
+        "sampling_method": sampling_method,
+        "preserve_time_structure": "contiguous_observation_blocks",
+        "no_multiple_testing_decision": True,
+        "interpretation": (
+            "Block bootstrap resample các đoạn liên tiếp để giữ nhịp thời gian cục bộ. "
+            "Khoảng bootstrap chỉ là chẩn đoán độ bền và không đổi p/q/status chính."
+        ),
+    }
+
+
+def _block_bootstrap_length(value_count: int) -> int:
+    return max(4, min(50, round(math.sqrt(value_count))))
+
+
+def _percentile(sorted_values: list[float], probability: float) -> float:
+    if not sorted_values:
+        return 0.0
+    position = (len(sorted_values) - 1) * max(0.0, min(1.0, probability))
+    lower_index = math.floor(position)
+    upper_index = math.ceil(position)
+    if lower_index == upper_index:
+        return sorted_values[lower_index]
+    fraction = position - lower_index
+    return sorted_values[lower_index] * (1 - fraction) + sorted_values[upper_index] * fraction
+
+
 def _permutation_preserve_unit(test_id: str) -> str:
     if test_id.startswith("number_"):
         return "whole_draw_sum"
@@ -1045,16 +1183,23 @@ def _runs_test(
         return None
     z_score = float(stats["z_score"])
     total = int(stats["total"])
+
+    def statistic_fn(sample: list[int]) -> float | None:
+        sample_stats = _runs_statistics(sample, center)
+        return None if sample_stats is None else float(sample_stats["z_score"])
+
     permutation_check = _permutation_check(
         test_id=test_id,
         values=values,
         statistic_name="z_score",
-        statistic_fn=lambda sample: (
-            None
-            if (sample_stats := _runs_statistics(sample, center)) is None
-            else float(sample_stats["z_score"])
-        ),
+        statistic_fn=statistic_fn,
         preserve_unit=_permutation_preserve_unit(test_id),
+    )
+    block_bootstrap_check = _block_bootstrap_check(
+        test_id=test_id,
+        values=values,
+        statistic_name="z_score",
+        statistic_fn=statistic_fn,
     )
     return _test_result(
         test_id=test_id,
@@ -1074,6 +1219,7 @@ def _runs_test(
             "runs": int(stats["runs"]),
             "expected_runs": _round(float(stats["expected_runs"])),
             "permutation_check": permutation_check,
+            "block_bootstrap_check": block_bootstrap_check,
         },
     )
 
@@ -1096,6 +1242,12 @@ def _autocorrelation_test(
         statistic_fn=_lag1_autocorrelation,
         preserve_unit=_permutation_preserve_unit(test_id),
     )
+    block_bootstrap_check = _block_bootstrap_check(
+        test_id=test_id,
+        values=values,
+        statistic_name="autocorrelation",
+        statistic_fn=_lag1_autocorrelation,
+    )
     return _test_result(
         test_id=test_id,
         family="sequence_dependence",
@@ -1109,7 +1261,11 @@ def _autocorrelation_test(
         effect_size=abs(coefficient),
         practical_threshold=0.05,
         sample_size=len(values) - 1,
-        parameters={"lag": 1, "permutation_check": permutation_check},
+        parameters={
+            "lag": 1,
+            "permutation_check": permutation_check,
+            "block_bootstrap_check": block_bootstrap_check,
+        },
     )
 
 
@@ -1125,16 +1281,23 @@ def _split_half_change_test(
         return None
     z_score = stats["z_score"]
     effect = stats["effect"]
+
+    def statistic_fn(sample: list[int]) -> float | None:
+        sample_stats = _split_half_statistics(sample)
+        return None if sample_stats is None else sample_stats["z_score"]
+
     permutation_check = _permutation_check(
         test_id=test_id,
         values=values,
         statistic_name="z_score",
-        statistic_fn=lambda sample: (
-            None
-            if (sample_stats := _split_half_statistics(sample)) is None
-            else sample_stats["z_score"]
-        ),
+        statistic_fn=statistic_fn,
         preserve_unit=_permutation_preserve_unit(test_id),
+    )
+    block_bootstrap_check = _block_bootstrap_check(
+        test_id=test_id,
+        values=values,
+        statistic_name="z_score",
+        statistic_fn=statistic_fn,
     )
     return _test_result(
         test_id=test_id,
@@ -1154,6 +1317,7 @@ def _split_half_change_test(
             "first_half_mean": _round(stats["first_half_mean"]),
             "second_half_mean": _round(stats["second_half_mean"]),
             "permutation_check": permutation_check,
+            "block_bootstrap_check": block_bootstrap_check,
         },
     )
 

@@ -15,6 +15,11 @@ backtest hoặc cách đọc website. Thay đổi giao diện thuần túy khôn
   `p_value`, q-value hoặc `status` chính
 - Chuỗi quá dài dùng lấy mẫu đều quyết định sẵn tối đa 5.000 đơn vị để giữ
   workflow tự động tái lập và đủ nhẹ
+- Thêm `parameters.block_bootstrap_check` cho cùng nhóm phép kiểm thứ tự, dùng
+  moving-block bootstrap 199 lần để công bố khoảng 95% của thống kê mà không đổi
+  p-value, q-value hoặc `status`
+- Chuỗi rất dài trong block bootstrap dùng tối đa 2.500 đơn vị lấy đều quyết định
+  sẵn, kèm `block_length` và `sampling_method` trong JSON
 
 ## 15/06/2026
 

@@ -958,6 +958,7 @@ function renderAuditTestRow(test) {
     ? formatPercent(power.observed_power)
     : "N/A";
   const permutation = renderPermutationCheck(test.parameters?.permutation_check);
+  const bootstrap = renderBlockBootstrapCheck(test.parameters?.block_bootstrap_check);
   return `
     <article class="audit-test-row ${escapeHtml(test.status)}">
       <div>
@@ -978,6 +979,7 @@ function renderAuditTestRow(test) {
           <div><dt>Công suất xấp xỉ</dt><dd>${escapeHtml(observedPower)}</dd></div>
         </dl>
         ${permutation}
+        ${bootstrap}
       </div>
     </article>`;
 }
@@ -1008,6 +1010,20 @@ function permutationUnitLabel(unit) {
     whole_digit_sum: "tổng chữ số của từng kết quả",
   };
   return labels[unit] || "từng đơn vị quan sát";
+}
+
+function renderBlockBootstrapCheck(check) {
+  if (!check || check.status !== "available") return "";
+  const lower = formatDecimal(check.confidence_interval_lower, 4);
+  const upper = formatDecimal(check.confidence_interval_upper, 4);
+  const sampleText = check.bootstrap_value_count < check.full_value_count
+    ? `, mẫu đều ${numberFormatter.format(check.bootstrap_value_count)}/${numberFormatter.format(check.full_value_count)}`
+    : "";
+  return `
+    <p class="audit-bootstrap-note">
+      <strong>Block bootstrap 95% [${escapeHtml(lower)}, ${escapeHtml(upper)}]</strong>
+      <span>Block liên tiếp ${numberFormatter.format(check.block_length)} đơn vị${escapeHtml(sampleText)}; không đổi q/status.</span>
+    </p>`;
 }
 
 function renderWeatherReport(weather) {

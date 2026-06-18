@@ -303,7 +303,16 @@ file để giữ lại dấu vết thay đổi.
   - Website hiển thị `Permutation p` trong chi tiết kiểm định; tài liệu hóa trong
     `docs/AUDIT_PERMUTATION_CHECKS.md` và khóa bằng unit test, documentation test,
     static-site test.
-- [ ] `AUDIT-012` Bổ sung block bootstrap theo thời gian cho chỉ số phụ thuộc chuỗi.
+- [x] `AUDIT-012` Bổ sung block bootstrap theo thời gian cho chỉ số phụ thuộc chuỗi.
+  - Hoàn thành ngày 18/06/2026.
+  - Các phép kiểm thứ tự `runs`, `lag1_autocorrelation` và `split_half_change` có
+    `parameters.block_bootstrap_check` với 199 lần moving-block bootstrap seed cố định.
+  - Bootstrap lấy lại các block liên tiếp để giữ nhịp thời gian cục bộ, công bố
+    `block_length`, khoảng 95% và trạng thái `no_multiple_testing_decision = true`.
+  - Với chuỗi quá dài, bootstrap dùng lấy mẫu đều quyết định sẵn tối đa 2.500 đơn vị.
+  - Website hiển thị `Block bootstrap 95%`; tài liệu hóa trong
+    `docs/AUDIT_BLOCK_BOOTSTRAP.md` và khóa bằng unit test, documentation test,
+    static-site test.
 - [ ] `AUDIT-013` Thay split-half duy nhất bằng change-point có nhiều điểm ứng viên.
   - Có thể thử PELT hoặc binary segmentation
   - Phải hiệu chỉnh việc tìm kiếm nhiều điểm

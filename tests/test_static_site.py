@@ -19,12 +19,12 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert 'id="phan-tich"' in index
     assert 'id="du-doan"' in index
     assert 'id="kiem-dinh"' in index
-    assert "assets/app.js?v=20260618-5" in index
+    assert "assets/app.js?v=20260618-6" in index
     assert "archive-summary-heading" in index
     assert "Sổ dự đoán toàn hệ thống" in index
     assert "assets/docs.js?v=20260618-2" in data_page
     for page in (index, method_page, data_page):
-        assert "assets/styles.css?v=20260618-4" in page
+        assert "assets/styles.css?v=20260618-5" in page
         assert "assets/favicon.svg?v=20260614-9" in page
         assert "fonts.googleapis.com/css2?family=Noto+Serif" in page
         assert "cdn-uicons.flaticon.com/3.0.0" in page
@@ -66,6 +66,9 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "Permutation p" in app_script
     assert "Hoán vị nguyên đơn vị" in app_script
     assert "audit-permutation-note" in styles
+    assert "renderBlockBootstrapCheck" in app_script
+    assert "Block bootstrap 95%" in app_script
+    assert "audit-bootstrap-note" in styles
     assert "renderAuditDependencyMatrix" in app_script
     assert "Ma trận phụ thuộc" in app_script
     assert "q theo họ" in app_script
@@ -272,6 +275,15 @@ def test_generated_site_data_matches_manifest() -> None:
             assert check["permutations"] == 499
             assert check["no_multiple_testing_decision"] is True
             assert 0 <= check["empirical_p_value"] <= 1
+            bootstrap = item["parameters"]["block_bootstrap_check"]
+            assert bootstrap["status"] == "available"
+            assert bootstrap["method"] == "moving_block_bootstrap"
+            assert bootstrap["resamples"] == 199
+            assert bootstrap["preserve_time_structure"] == "contiguous_observation_blocks"
+            assert bootstrap["no_multiple_testing_decision"] is True
+            assert bootstrap["confidence_interval_lower"] <= bootstrap[
+                "confidence_interval_upper"
+            ]
         if product["slug"] in {"max3d", "max4d"}:
             position_test = next(
                 item
