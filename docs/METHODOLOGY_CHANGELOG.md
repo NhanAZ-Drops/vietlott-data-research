@@ -44,6 +44,10 @@ backtest hoặc cách đọc website. Thay đổi giao diện thuần túy khôn
 - Thêm `backtest.score_formulas` cho từng sản phẩm, tách đơn vị
   `main_number_hits_per_draw` của tập số khỏi `best_position_matches_per_draw`
   của chuỗi chữ số và công bố công thức từng chiến lược bằng JSON có cấu trúc
+- Thêm `backtest.baseline.partial_match_baseline`, công bố xác suất và số lượt
+  kỳ vọng cho trùng một phần, gần đúng và không trùng gì trên đúng tập kỳ
+  walk-forward đã khóa; trường này không đổi p-value, q-value hoặc kết luận
+  thắng baseline
 
 ## 15/06/2026
 

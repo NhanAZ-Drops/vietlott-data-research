@@ -958,6 +958,11 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
         product.pick_count or 0,
         len(model_hits),
     )
+    partial_match_baseline = _number_partial_match_baseline(
+        product,
+        len(model_hits),
+        baseline_distribution,
+    )
     exact_probability = 1 / math.comb(product.pool_size, product.pick_count or 0)
     comparison_wins = fmean(differences) > 0 and p_value < 0.05
     recent_comparison_wins = (
@@ -1010,6 +1015,7 @@ def _number_backtest(dataset: ProductDataset) -> dict[str, object]:
             "expected_exact_hits": _round(len(model_hits) * exact_probability),
             "exact_hit_probability": _round(exact_probability, 12),
             "hit_distribution": baseline_distribution,
+            "partial_match_baseline": partial_match_baseline,
         },
         "comparison": {
             **scope_fields,
@@ -1211,6 +1217,12 @@ def _digit_backtest(dataset: ProductDataset) -> dict[str, object]:
             "score_distribution": _expected_counter_to_rows(
                 baseline_distribution,
                 samples,
+            ),
+            "partial_match_baseline": _digit_partial_match_baseline(
+                baseline_distribution,
+                samples,
+                length,
+                len(symbols) ** length,
             ),
         },
         "comparison": {
@@ -1963,6 +1975,54 @@ def _normal_mean_interval(differences: list[float]) -> dict[str, float]:
     }
 
 
+def _number_partial_match_baseline(
+    product: AnalyticsProduct,
+    samples: int,
+    distribution_rows: list[dict[str, float | int]],
+) -> dict[str, object]:
+    pick_count = product.pick_count or 0
+    probability_by_hits = {
+        int(row["hits"]): float(row["probability"])
+        for row in distribution_rows
+    }
+    exact_probability = probability_by_hits.get(pick_count, 0.0)
+    near_hits = pick_count - 1
+    near_probability = (
+        probability_by_hits.get(near_hits, 0.0)
+        if 0 <= near_hits < pick_count
+        else 0.0
+    )
+    zero_probability = probability_by_hits.get(0, 0.0)
+    partial_probability = sum(
+        probability
+        for hits, probability in probability_by_hits.items()
+        if 0 < hits < pick_count
+    )
+    any_match_probability = 1 - zero_probability
+    return {
+        "schema_version": 1,
+        "method": "exact_hypergeometric_distribution",
+        "score_basis": "main_number_hits",
+        "score_unit": "main_number_hits_per_draw",
+        "samples": samples,
+        "pool_size": product.pool_size,
+        "pick_count": pick_count,
+        "partial_match_rule": "0 < hit_count_t < pick_count",
+        "near_rule": "hit_count_t == pick_count - 1 and not exact",
+        "zero_match_rule": "hit_count_t == 0",
+        "exact_probability": _significant(exact_probability),
+        "near_probability": _significant(near_probability),
+        "partial_match_probability": _significant(partial_probability),
+        "zero_match_probability": _significant(zero_probability),
+        "any_match_probability": _significant(any_match_probability),
+        "expected_exact_count": _round(samples * exact_probability),
+        "expected_near_count": _round(samples * near_probability),
+        "expected_partial_match_count": _round(samples * partial_probability),
+        "expected_zero_match_count": _round(samples * zero_probability),
+        "expected_any_match_count": _round(samples * any_match_probability),
+    }
+
+
 def _number_uniform_distribution(
     pool_size: int,
     pick_count: int,
@@ -1985,6 +2045,50 @@ def _number_uniform_distribution(
             }
         )
     return rows
+
+
+def _digit_partial_match_baseline(
+    expected_score_counts: Counter[int],
+    samples: int,
+    sequence_length: int,
+    candidate_space_size: int,
+) -> dict[str, object]:
+    def probability(score: int) -> float:
+        return float(expected_score_counts.get(score, 0.0)) / samples if samples else 0.0
+
+    exact_probability = probability(sequence_length)
+    near_score = sequence_length - 1
+    near_probability = (
+        probability(near_score) if 0 <= near_score < sequence_length else 0.0
+    )
+    zero_probability = probability(0)
+    partial_probability = sum(
+        probability(score) for score in range(1, sequence_length)
+    )
+    any_match_probability = 1 - zero_probability
+    return {
+        "schema_version": 1,
+        "method": "exact_sequence_enumeration",
+        "score_basis": "best_position_matches",
+        "score_unit": "best_position_matches_per_draw",
+        "samples": samples,
+        "candidate_space_size": candidate_space_size,
+        "sequence_length": sequence_length,
+        "partial_match_rule": "0 < best_position_matches_t < sequence_length",
+        "near_rule": "best_position_matches_t == sequence_length - 1 and not exact",
+        "zero_match_rule": "best_position_matches_t == 0",
+        "multi_outcome_policy": "score is the best match across actual outcomes in each draw",
+        "exact_probability": _significant(exact_probability),
+        "near_probability": _significant(near_probability),
+        "partial_match_probability": _significant(partial_probability),
+        "zero_match_probability": _significant(zero_probability),
+        "any_match_probability": _significant(any_match_probability),
+        "expected_exact_count": _round(samples * exact_probability),
+        "expected_near_count": _round(samples * near_probability),
+        "expected_partial_match_count": _round(samples * partial_probability),
+        "expected_zero_match_count": _round(samples * zero_probability),
+        "expected_any_match_count": _round(samples * any_match_probability),
+    }
 
 
 def _digit_uniform_expectation(

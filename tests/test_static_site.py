@@ -134,6 +134,8 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "Tập kỳ mục tiêu chung" in app_script
     assert "target_scope" in app_script
     assert "renderBacktestScoreFormulas" in app_script
+    assert "renderBacktestPartialBaseline" in app_script
+    assert "Baseline trùng một phần" in app_script
     assert "Thước đo riêng" in app_script
     assert "Ba chiến lược ứng viên" in method_page
     assert "hiệu chỉnh Benjamini-Hochberg" in method_page
@@ -415,6 +417,19 @@ def test_generated_site_data_matches_manifest() -> None:
             assert formulas["score_unit"] == "best_position_matches_per_draw"
             assert formulas["comparison_metric"] == "mean_position_match_difference"
             assert "multi_outcome_policy" in formulas
+        partial_baseline = report["backtest"]["baseline"]["partial_match_baseline"]
+        assert partial_baseline["samples"] == report["backtest"]["samples"]
+        assert partial_baseline["expected_partial_match_count"] >= 0
+        assert partial_baseline["expected_zero_match_count"] >= 0
+        assert 0 <= partial_baseline["partial_match_probability"] <= 1
+        assert 0 <= partial_baseline["zero_match_probability"] <= 1
+        if product["kind"] == "number_set":
+            assert partial_baseline["method"] == "exact_hypergeometric_distribution"
+            assert partial_baseline["score_basis"] == "main_number_hits"
+        else:
+            assert partial_baseline["method"] == "exact_sequence_enumeration"
+            assert partial_baseline["score_basis"] == "best_position_matches"
+            assert partial_baseline["multi_outcome_policy"]
         target_scope = report["backtest"]["target_scope"]
         assert target_scope["method"] == "same_confirmed_draw_targets_for_all_strategies"
         assert target_scope["target_draw_count"] == report["backtest"]["samples"]

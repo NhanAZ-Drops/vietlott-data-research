@@ -214,6 +214,9 @@ def _build_analysis_export(
                     "digit_sequence": "exact_sequence_enumeration",
                 },
                 "score_formula_field": "product_reports[*].backtest.score_formulas",
+                "partial_match_baseline_field": (
+                    "product_reports[*].backtest.baseline.partial_match_baseline"
+                ),
                 "score_units": {
                     "number_set": "main_number_hits_per_draw",
                     "digit_sequence": "best_position_matches_per_draw",

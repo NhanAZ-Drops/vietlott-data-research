@@ -25,6 +25,16 @@ Baseline dùng `exact_hypergeometric_expectation`. Số đặc biệt chưa đư
 điểm backtest này và được ghi rõ bằng
 `special_numbers_policy = special_numbers_not_scored_in_backtest`.
 
+Baseline trùng một phần được công bố tại
+`backtest.baseline.partial_match_baseline`. Với tập số, trường này dùng cùng
+phân phối siêu bội của `hit_count_t`:
+
+- `partial_match_probability`: xác suất `0 < hit_count_t < pick_count`.
+- `near_probability`: xác suất `hit_count_t == pick_count - 1` và chưa đúng toàn bộ.
+- `zero_match_probability`: xác suất `hit_count_t == 0`.
+- `expected_partial_match_count`, `expected_near_count` và `expected_zero_match_count`:
+  số lượt kỳ vọng trên đúng tập kỳ walk-forward đã khóa.
+
 Chiến lược:
 
 - `balanced_signal`: `0.40*short_z + 0.30*recent_z - 0.15*long_z + 0.15*(overdue_ratio - 1)`.
@@ -52,6 +62,16 @@ d_t = best_position_matches_t - E_uniform(best_position_matches_t | actual outco
 
 Baseline dùng `exact_sequence_enumeration`.
 
+Baseline trùng một phần cũng được công bố tại
+`backtest.baseline.partial_match_baseline`. Với chuỗi chữ số, trường này cộng
+phân phối exact của `best_position_matches_t` theo từng kỳ:
+
+- `partial_match_probability`: xác suất `0 < best_position_matches_t < sequence_length`.
+- `near_probability`: xác suất `best_position_matches_t == sequence_length - 1` và chưa đúng toàn bộ.
+- `zero_match_probability`: xác suất `best_position_matches_t == 0`.
+- `expected_partial_match_count`, `expected_near_count` và `expected_zero_match_count`:
+  số lượt kỳ vọng trên đúng tập kỳ walk-forward đã khóa.
+
 Chiến lược:
 
 - `balanced_signal`: `0.40*short_z + 0.30*recent_z - 0.20*long_z`.
@@ -66,3 +86,7 @@ Mỗi `score_formulas` phải có `product_kind`, `score_unit`,
 
 Các trường này chỉ công bố công thức và đơn vị đọc kết quả. Chúng không tự thay
 p-value, q-value hoặc kết luận thắng baseline.
+
+`partial_match_baseline` là baseline phụ của phần phân phối điểm. Trường này
+không thay `comparison`, không tạo p-value mới và không được dùng một mình để
+gọi chiến lược là tốt hơn baseline.

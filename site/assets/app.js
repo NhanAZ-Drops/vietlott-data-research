@@ -1692,6 +1692,7 @@ function renderBacktest(backtest, kind) {
           ${numberFormatter.format(backtest.samples)} kỳ kiểm tra.
         </p>`;
     }).join("")}
+    ${renderBacktestPartialBaseline(backtest.baseline?.partial_match_baseline)}
     <details class="backtest-method-details">
       <summary>
         <span>Phương pháp và công thức của báo cáo này</span>
@@ -1715,6 +1716,22 @@ function renderBacktest(backtest, kind) {
         </p>
       </div>
     </details>`;
+}
+
+function renderBacktestPartialBaseline(baseline) {
+  if (!baseline) return "";
+  const expectedPartial = formatExpectedCount(baseline.expected_partial_match_count);
+  const expectedNear = formatExpectedCount(baseline.expected_near_count);
+  const expectedZero = formatExpectedCount(baseline.expected_zero_match_count);
+  return `
+    <p class="backtest-evidence">
+      <span>Baseline trùng một phần</span>
+      Chọn đều kỳ vọng ${expectedPartial} lượt có trùng một phần,
+      ${expectedNear} lượt gần đúng và ${expectedZero} lượt không trùng gì.
+      Xác suất mỗi kỳ: trùng một phần ${formatProbability(baseline.partial_match_probability)},
+      gần đúng ${formatProbability(baseline.near_probability)},
+      không trùng ${formatProbability(baseline.zero_match_probability)}.
+    </p>`;
 }
 
 function renderBacktestScoreFormulas(formulas, kind) {

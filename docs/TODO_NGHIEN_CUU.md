@@ -391,9 +391,18 @@ file để giữ lại dấu vết thay đổi.
   - Tài liệu hóa trong `docs/BACKTEST_SCORE_FORMULAS.md` và khóa bằng unit test,
     documentation test, static-site test.
 
-- [ ] `BACKTEST-004` Thêm baseline xác suất cho cả điểm trùng một phần.
+- [x] `BACKTEST-004` Thêm baseline xác suất cho cả điểm trùng một phần.
   - Baseline phải dùng phân bố chính xác khi có thể tính được
   - Không dùng một lần bốc ngẫu nhiên làm baseline
+  - Hoàn thành ngày 18/06/2026.
+  - `backtest.baseline.partial_match_baseline` công bố xác suất và số lượt kỳ vọng
+    cho trùng một phần, gần đúng và không trùng gì trên đúng `target_scope` đã khóa.
+  - Tập số dùng phân phối siêu bội exact của `main_number_hits`; chuỗi chữ số dùng
+    enumeration exact của `best_position_matches` theo từng kỳ và chính sách nhiều
+    outcome đã công bố.
+  - Website hiển thị dòng "Baseline trùng một phần"; tài liệu hóa trong
+    `docs/BACKTEST_SCORE_FORMULAS.md` và khóa bằng unit test, documentation test,
+    static-site test.
 
 ### P1.5 Kiểm soát tối ưu quá mức và rò rỉ dữ liệu
 

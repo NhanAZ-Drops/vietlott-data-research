@@ -203,6 +203,23 @@ def test_walk_forward_backtest_reports_uniform_baseline() -> None:
     assert report["baseline"]["strategy"] == "uniform_exact_expectation"
     assert report["baseline"]["method"] == "exact_hypergeometric_expectation"
     assert report["baseline"]["average_hits"] == 0.8
+    partial_baseline = report["baseline"]["partial_match_baseline"]
+    assert partial_baseline["method"] == "exact_hypergeometric_distribution"
+    assert partial_baseline["score_basis"] == "main_number_hits"
+    assert partial_baseline["samples"] == report["samples"]
+    assert partial_baseline["partial_match_rule"] == "0 < hit_count_t < pick_count"
+    assert partial_baseline["partial_match_probability"] == pytest.approx(
+        sum(
+            row["probability"]
+            for row in report["baseline"]["hit_distribution"]
+            if 0 < row["hits"] < report["baseline"]["partial_match_baseline"]["pick_count"]
+        )
+    )
+    assert (
+        partial_baseline["expected_partial_match_count"]
+        > partial_baseline["expected_near_count"]
+        > partial_baseline["expected_exact_count"]
+    )
     formulas = report["score_formulas"]
     assert formulas["product_kind"] == "number_set"
     assert formulas["score_unit"] == "main_number_hits_per_draw"
@@ -247,6 +264,19 @@ def test_digit_walk_forward_backtest_reports_digit_score_formula() -> None:
 
     assert report["status"] == "complete"
     assert report["baseline"]["method"] == "exact_sequence_enumeration"
+    partial_baseline = report["baseline"]["partial_match_baseline"]
+    assert partial_baseline["method"] == "exact_sequence_enumeration"
+    assert partial_baseline["score_basis"] == "best_position_matches"
+    assert partial_baseline["samples"] == report["samples"]
+    assert partial_baseline["candidate_space_size"] == 1000
+    assert (
+        partial_baseline["partial_match_rule"]
+        == "0 < best_position_matches_t < sequence_length"
+    )
+    assert partial_baseline["expected_partial_match_count"] > partial_baseline[
+        "expected_exact_count"
+    ]
+    assert 0 < partial_baseline["zero_match_probability"] < 1
     formulas = report["score_formulas"]
     assert formulas["product_kind"] == "digit_sequence"
     assert formulas["score_unit"] == "best_position_matches_per_draw"

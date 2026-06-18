@@ -223,3 +223,5 @@ def test_backtest_score_formula_documentation_has_required_fields() -> None:
     assert "best_position_matches_per_draw" in document
     assert "comparison_difference" in document
     assert "special_numbers_not_scored_in_backtest" in document
+    assert "partial_match_baseline" in document
+    assert "expected_partial_match_count" in document
