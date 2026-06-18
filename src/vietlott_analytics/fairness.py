@@ -14,6 +14,9 @@ from .io import ProductDataset
 
 AUDIT_SUITE_VERSION = "2.0.0"
 NORMAL = NormalDist()
+DIGIT_PERIOD_SEGMENTS = 3
+DIGIT_PERIOD_MIN_DRAWS = 30
+DIGIT_PERIOD_TOP_RESIDUALS = 5
 
 TIER_LABELS = {
     "first": "Giải nhất",
@@ -1242,6 +1245,7 @@ def _digit_position_test(
             "expected_per_position_digit": _round(expected),
             "position_residuals": residuals,
             "tier_breakdown": _digit_tier_breakdown(dataset, symbols),
+            "period_breakdown": _digit_period_breakdown(dataset, symbols),
             "residual_note": (
                 "Residual được công bố để giải thích đóng góp vào kiểm định tổng. "
                 "Không dùng từng ô như một kiểm định độc lập mới."
@@ -1388,6 +1392,129 @@ def _digit_tier_row(
         ),
         "max_abs_standardized_residual": _round(max_abs_residual),
         "position_residuals": residuals,
+    }
+
+
+def _digit_period_breakdown(
+    dataset: ProductDataset,
+    symbols: list[int],
+) -> dict[str, Any]:
+    product = dataset.product
+    length = product.sequence_length or 0
+    usable_observations = [
+        observation
+        for observation in dataset.observations
+        if any(len(outcome) == length and outcome.isdigit() for outcome in observation.outcomes)
+    ]
+    if len(usable_observations) < DIGIT_PERIOD_SEGMENTS * DIGIT_PERIOD_MIN_DRAWS:
+        return {
+            "status": "insufficient_data",
+            "basis": "confirmed_draw_order",
+            "segment_count": DIGIT_PERIOD_SEGMENTS,
+            "min_segment_draws": DIGIT_PERIOD_MIN_DRAWS,
+            "observed_draws": len(usable_observations),
+            "segments": [],
+            "no_new_p_values": True,
+            "interpretation": (
+                "Mẫu chưa đủ để chia thành các giai đoạn thời gian không chồng lấn có kích thước tối thiểu."
+            ),
+        }
+
+    segments = [
+        _digit_period_row(
+            segment_index=index + 1,
+            observations=usable_observations[
+                len(usable_observations) * index // DIGIT_PERIOD_SEGMENTS:
+                len(usable_observations) * (index + 1) // DIGIT_PERIOD_SEGMENTS
+            ],
+            symbols=symbols,
+            length=length,
+        )
+        for index in range(DIGIT_PERIOD_SEGMENTS)
+    ]
+    return {
+        "status": "available",
+        "basis": "confirmed_draw_order",
+        "segment_count": DIGIT_PERIOD_SEGMENTS,
+        "min_segment_draws": DIGIT_PERIOD_MIN_DRAWS,
+        "observed_draws": len(usable_observations),
+        "segments": segments,
+        "no_new_p_values": True,
+        "interpretation": (
+            "Các giai đoạn là những khối lịch sử liên tiếp, không chồng lấn. "
+            "Chỉ công bố đóng góp và residual để đọc độ ổn định, không tính p-value riêng cho từng khối."
+        ),
+    }
+
+
+def _digit_period_row(
+    *,
+    segment_index: int,
+    observations: list[Any],
+    symbols: list[int],
+    length: int,
+) -> dict[str, Any]:
+    outcomes = [
+        outcome
+        for observation in observations
+        for outcome in observation.outcomes
+        if len(outcome) == length and outcome.isdigit()
+    ]
+    position_counts = [Counter() for _ in range(length)]
+    for outcome in outcomes:
+        for position, char in enumerate(outcome):
+            position_counts[position][int(char)] += 1
+    expected = len(outcomes) / len(symbols) if symbols else 0.0
+    residuals = [
+        {
+            "position": position + 1,
+            "digit": digit,
+            "observed": counter[digit],
+            "expected": _round(expected),
+            "standardized_residual": _round(
+                (counter[digit] - expected) / math.sqrt(expected)
+                if expected > 0
+                else 0.0
+            ),
+            "chi_square_contribution": _round(
+                ((counter[digit] - expected) ** 2) / expected
+                if expected > 0
+                else 0.0
+            ),
+        }
+        for position, counter in enumerate(position_counts)
+        for digit in symbols
+    ]
+    statistic = sum(item["chi_square_contribution"] for item in residuals)
+    max_abs_residual = max(
+        (abs(float(item["standardized_residual"])) for item in residuals),
+        default=0.0,
+    )
+    top_residuals = sorted(
+        residuals,
+        key=lambda item: abs(float(item["standardized_residual"])),
+        reverse=True,
+    )[:DIGIT_PERIOD_TOP_RESIDUALS]
+    first = observations[0]
+    last = observations[-1]
+    return {
+        "segment_index": segment_index,
+        "segment_label": f"Giai đoạn {segment_index}",
+        "start_draw_id": first.draw_id,
+        "end_draw_id": last.draw_id,
+        "start_date": first.draw_date.isoformat(),
+        "end_date": last.draw_date.isoformat(),
+        "draws": len(observations),
+        "outcomes": len(outcomes),
+        "expected_per_position_digit": _round(expected),
+        "chi_square_contribution": _round(statistic),
+        "effect_size": _round(
+            math.sqrt(statistic / (len(outcomes) * length))
+            if outcomes and length
+            else 0.0
+        ),
+        "max_abs_standardized_residual": _round(max_abs_residual),
+        "top_residuals": top_residuals,
     }
 
 

@@ -135,6 +135,21 @@ def test_finalize_audits_adds_global_correction_and_jsonl_events() -> None:
         position_test["statistic"],
         abs=1e-4,
     )
+    period_breakdown = position_test["parameters"]["period_breakdown"]
+    assert period_breakdown["status"] == "available"
+    assert period_breakdown["no_new_p_values"] is True
+    assert period_breakdown["segment_count"] == 3
+    assert [segment["draws"] for segment in period_breakdown["segments"]] == [40, 40, 40]
+    assert all("p_value" not in segment for segment in period_breakdown["segments"])
+    assert all(segment["top_residuals"] for segment in period_breakdown["segments"])
+    assert all(
+        "p_value" not in residual
+        for segment in period_breakdown["segments"]
+        for residual in segment["top_residuals"]
+    )
+    assert int(period_breakdown["segments"][0]["end_draw_id"]) < int(
+        period_breakdown["segments"][1]["start_draw_id"]
+    )
 
 
 def test_digit_position_audit_breaks_down_tiered_outcomes_without_new_p_values() -> None:

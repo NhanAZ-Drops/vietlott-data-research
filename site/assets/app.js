@@ -790,6 +790,7 @@ function renderAuditPositionResiduals(audit) {
       </div>
       <small>${escapeHtml(test.parameters.residual_note || "")}</small>
       ${renderAuditTierBreakdown(test)}
+      ${renderAuditPeriodBreakdown(test)}
     </section>`;
 }
 
@@ -827,6 +828,45 @@ function renderAuditTierBreakdown(test) {
               <div><dt>Độ lớn</dt><dd>${formatDecimal(tier.effect_size || 0, 4)}</dd></div>
               <div><dt>|residual|max</dt><dd>${formatDecimal(tier.max_abs_standardized_residual || 0, 3)}</dd></div>
             </dl>
+          </article>`).join("")}
+      </div>
+    </div>`;
+}
+
+function renderAuditPeriodBreakdown(test) {
+  const breakdown = test.parameters?.period_breakdown;
+  const segments = breakdown?.segments || [];
+  if (!breakdown || breakdown.status !== "available" || !segments.length) return "";
+  return `
+    <div class="position-period-panel" aria-label="Phân rã theo giai đoạn thời gian">
+      <div class="position-period-heading">
+        <div>
+          <span>Giai đoạn không chồng lấn</span>
+          <strong>Residual có lặp lại qua lịch sử không?</strong>
+        </div>
+        <p>${escapeHtml(breakdown.interpretation || "")}</p>
+      </div>
+      <div class="position-period-grid">
+        ${segments.map((segment) => `
+          <article>
+            <header>
+              <span>${escapeHtml(segment.segment_label || `Giai đoạn ${segment.segment_index}`)}</span>
+              <strong>${formatDate(segment.start_date)} đến ${formatDate(segment.end_date)}</strong>
+              <small>#${escapeHtml(segment.start_draw_id)} đến #${escapeHtml(segment.end_draw_id)}</small>
+            </header>
+            <dl>
+              <div><dt>Số kỳ</dt><dd>${numberFormatter.format(segment.draws || 0)}</dd></div>
+              <div><dt>Kết quả</dt><dd>${numberFormatter.format(segment.outcomes || 0)}</dd></div>
+              <div><dt>Đóng góp χ²</dt><dd>${formatDecimal(segment.chi_square_contribution || 0, 3)}</dd></div>
+              <div><dt>|residual|max</dt><dd>${formatDecimal(segment.max_abs_standardized_residual || 0, 3)}</dd></div>
+            </dl>
+            <div class="position-period-residuals">
+              ${(segment.top_residuals || []).map((item) => `
+                <span title="Vị trí ${item.position}, số ${item.digit}: quan sát ${numberFormatter.format(item.observed)}, kỳ vọng ${formatDecimal(item.expected, 1)}">
+                  V${escapeHtml(item.position)}:${escapeHtml(item.digit)}
+                  <b>${formatSigned(item.standardized_residual)}</b>
+                </span>`).join("")}
+            </div>
           </article>`).join("")}
       </div>
     </div>`;

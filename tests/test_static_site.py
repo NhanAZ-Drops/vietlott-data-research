@@ -68,11 +68,14 @@ def test_static_site_has_required_pages_and_local_assets() -> None:
     assert "audit-dependency-grid" in styles
     assert "renderAuditPositionResiduals" in app_script
     assert "renderAuditTierBreakdown" in app_script
+    assert "renderAuditPeriodBreakdown" in app_script
     assert "Ô nào đóng góp nhiều vào độ lệch tổng?" in app_script
     assert "Phân rã residual, không tạo p-value mới" in app_script
+    assert "Giai đoạn không chồng lấn" in app_script
     assert "threshold-sensitivity-grid" in styles
     assert "position-residual-grid" in styles
     assert "position-tier-grid" in styles
+    assert "position-period-grid" in styles
     assert "audit-test-details" in app_script
     assert "audit-test-list-inner" in styles
     assert 'text("ribbon-product-count"' in app_script
@@ -240,6 +243,11 @@ def test_generated_site_data_matches_manifest() -> None:
             assert breakdown["status"] == "available"
             assert breakdown["no_new_p_values"] is True
             assert breakdown["tiers"]
+            period_breakdown = position_test["parameters"]["period_breakdown"]
+            assert period_breakdown["status"] == "available"
+            assert period_breakdown["no_new_p_values"] is True
+            assert len(period_breakdown["segments"]) == 3
+            assert all("p_value" not in segment for segment in period_breakdown["segments"])
             if product["slug"] == "max4d":
                 assert any(
                     row["result_type"] == "wildcard_prefix"

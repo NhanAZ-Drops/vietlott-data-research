@@ -263,7 +263,15 @@ file để giữ lại dấu vết thay đổi.
     Max 3D, Max 3D Pro và Max 4D, chỉ là metadata giải thích và không tạo p-value mới.
   - Website hiển thị bảng phân rã hạng giải, tài liệu hóa trong `docs/AUDIT_TIER_BREAKDOWN.md`, và
     đã kiểm chứng bằng `ruff`, toàn bộ `pytest`, `vietlott-repository-data validate` cùng report mới.
-- [ ] `AUDIT-008` Kiểm tra tín hiệu theo các giai đoạn thời gian không chồng lấn.
+- [x] `AUDIT-008` Kiểm tra tín hiệu theo các giai đoạn thời gian không chồng lấn.
+  - Hoàn thành ngày 18/06/2026.
+  - `digit_position_chi_square.parameters.period_breakdown` chia lịch sử chuỗi chữ số đã xác nhận
+    thành 3 giai đoạn liên tiếp, không chồng lấn, mỗi giai đoạn tối thiểu 30 kỳ.
+  - Mỗi giai đoạn công bố biên kỳ, số outcome, đóng góp chi-square, độ lớn hiệu ứng,
+    residual lớn nhất và `top_residuals`, nhưng `no_new_p_values = true` để không biến phần
+    giải thích thành phép kiểm hậu nghiệm.
+  - Website hiển thị bảng giai đoạn trong phần residual vị trí, tài liệu hóa trong
+    `docs/AUDIT_PERIOD_BREAKDOWN.md`, và khóa bằng unit test cùng static-site test.
 - [ ] `AUDIT-009` Kiểm tra tín hiệu riêng theo nguồn để loại trừ lỗi parser hoặc mirror.
 - [ ] `AUDIT-010` Thực hiện phân tích công suất và hiệu ứng nhỏ nhất có thể phát hiện.
 
