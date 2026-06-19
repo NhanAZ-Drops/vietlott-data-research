@@ -14,9 +14,6 @@ from vietlott_collector.storage import SqliteDatasetStore
 def test_publish_and_hydrate_partitioned_dataset(tmp_path) -> None:
     data_dir = tmp_path / "data"
     dataset_dir = tmp_path / "datasets"
-    weather_dir = dataset_dir / "weather"
-    weather_dir.mkdir(parents=True)
-    (weather_dir / "daily.csv").write_text("date,temp\n2026-06-01,30\n", encoding="utf-8")
     store = SqliteDatasetStore(data_dir)
     try:
         store.upsert(
@@ -38,7 +35,7 @@ def test_publish_and_hydrate_partitioned_dataset(tmp_path) -> None:
     assert (dataset_dir / "draws" / "keno" / "2026-05.csv").exists()
     assert (dataset_dir / "draws" / "keno" / "2026-06.csv").exists()
     assert (dataset_dir / "draws" / "mega645" / "all.csv").exists()
-    assert (dataset_dir / "weather" / "daily.csv").exists()
+    assert not (dataset_dir / "weather").exists()
     quality_path = dataset_dir / "metadata" / "quality-report.json"
     snapshot_path = dataset_dir / "metadata" / "snapshot-manifest.json"
     assert quality_path.exists()
@@ -48,8 +45,7 @@ def test_publish_and_hydrate_partitioned_dataset(tmp_path) -> None:
     assert quality["products"]["keno"]["result_coverage"]["rate"] == 1.0
     manifest = json.loads(snapshot_path.read_text(encoding="utf-8"))
     assert manifest["dataset_rows"] == {"draws": 3, "prizes": 1}
-    assert "weather/daily.csv" in manifest["files"]
-    (dataset_dir / "weather" / "daily.csv").write_bytes(b"date,temp\r\n2026-06-01,30\r\n")
+    assert all(not path.startswith("weather/") for path in manifest["files"])
     assert validate_repository_data(dataset_dir)["valid"] is True
 
     hydrated = tmp_path / "hydrated"

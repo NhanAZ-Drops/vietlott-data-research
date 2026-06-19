@@ -35,7 +35,6 @@ def publish_repository_data(
     temp_dir.mkdir(parents=True)
 
     try:
-        _copy_auxiliary_dataset_files(destination_dir, temp_dir)
         summary = _partition_draws(draws_path, temp_dir / "draws")
         prize_rows = _partition_prizes(prizes_path, temp_dir / "prizes")
         _write_exclusions(temp_dir / "exclusions.csv")
@@ -363,22 +362,6 @@ def _remove_tree(path: Path) -> None:
     if path == path.parent or not path.name:
         raise ValueError(f"Refusing to remove unsafe path {path}")
     shutil.rmtree(path)
-
-
-def _copy_auxiliary_dataset_files(source: Path, destination: Path) -> None:
-    """Preserve independently maintained datasets such as historical weather."""
-
-    if not source.exists():
-        return
-    owned = {"draws", "prizes", "metadata", "exclusions.csv", "prize_rules.csv"}
-    for item in source.iterdir():
-        if item.name in owned:
-            continue
-        target = destination / item.name
-        if item.is_dir():
-            shutil.copytree(item, target)
-        elif item.is_file():
-            shutil.copyfile(item, target)
 
 
 def _minimum(old: object, new: str) -> str:
