@@ -1,9 +1,9 @@
 {
-  "confirmed_rows": 380030,
-  "dataset_updated_at": "2026-06-19T11:17:07+00:00",
-  "draw_rows": 380091,
+  "confirmed_rows": 380033,
+  "dataset_updated_at": "2026-06-19T14:19:08+00:00",
+  "draw_rows": 380094,
   "not_confirmed_rows": 61,
-  "prize_rows": 45453,
+  "prize_rows": 45475,
   "products": {
     "bingo18": {
       "confirmed_rows": 88925,
@@ -24,22 +24,22 @@
       "rows": 284984
     },
     "lotto535": {
-      "confirmed_rows": 711,
+      "confirmed_rows": 712,
       "first_date": "2025-06-29",
       "last_date": "2026-06-19",
-      "max_id": "00711",
+      "max_id": "00712",
       "min_id": "00001",
       "not_confirmed_rows": 0,
-      "rows": 711
+      "rows": 712
     },
     "max3d": {
-      "confirmed_rows": 1094,
+      "confirmed_rows": 1095,
       "first_date": "2019-04-22",
-      "last_date": "2026-06-17",
-      "max_id": "01094",
+      "last_date": "2026-06-19",
+      "max_id": "01095",
       "min_id": "00001",
       "not_confirmed_rows": 0,
-      "rows": 1094
+      "rows": 1095
     },
     "max3dpro": {
       "confirmed_rows": 741,
@@ -60,13 +60,13 @@
       "rows": 722
     },
     "mega645": {
-      "confirmed_rows": 1524,
+      "confirmed_rows": 1525,
       "first_date": "2016-07-20",
-      "last_date": "2026-06-17",
-      "max_id": "01524",
+      "last_date": "2026-06-19",
+      "max_id": "01525",
       "min_id": "00001",
       "not_confirmed_rows": 0,
-      "rows": 1524
+      "rows": 1525
     },
     "power655": {
       "confirmed_rows": 1360,
