@@ -1,9 +1,9 @@
 {
-  "confirmed_rows": 380363,
-  "dataset_updated_at": "2026-06-21T11:56:24+00:00",
-  "draw_rows": 380424,
+  "confirmed_rows": 380364,
+  "dataset_updated_at": "2026-06-21T13:17:05+00:00",
+  "draw_rows": 380425,
   "not_confirmed_rows": 61,
-  "prize_rows": 45509,
+  "prize_rows": 45513,
   "products": {
     "bingo18": {
       "confirmed_rows": 89094,
@@ -60,13 +60,13 @@
       "rows": 722
     },
     "mega645": {
-      "confirmed_rows": 1525,
+      "confirmed_rows": 1526,
       "first_date": "2016-07-20",
-      "last_date": "2026-06-19",
-      "max_id": "01525",
+      "last_date": "2026-06-21",
+      "max_id": "01526",
       "min_id": "00001",
       "not_confirmed_rows": 0,
-      "rows": 1525
+      "rows": 1526
     },
     "power655": {
       "confirmed_rows": 1361,
